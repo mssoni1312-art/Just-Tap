@@ -1,0 +1,42 @@
+{
+  "name": "justtap-backend",
+  "version": "1.0.0",
+  "description": "Just Tap Super Admin Mobile API",
+  "main": "src/server.js",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "start": "node src/server.js",
+    "start:prod": "NODE_ENV=production node src/server.js",
+    "dev": "node --watch src/server.js",
+    "db:setup": "node src/database/setup.js setup",
+    "db:migrate": "node src/database/setup.js migrate",
+    "db:seed": "node src/database/setup.js seed",
+    "wait:services": "node scripts/wait-for-services.js",
+    "openapi:generate": "node scripts/generate-openapi.js",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f api",
+    "docker:reset": "docker compose down -v && docker compose up -d --build"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "joi": "^17.13.3",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.12.0",
+    "redis": "^4.7.1",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "uuid": "^11.0.5",
+    "winston": "^3.17.0"
+  }
+}

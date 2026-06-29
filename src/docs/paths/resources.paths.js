@@ -1,0 +1,218 @@
+const {
+  op, jsonBody, idParam, paginationParams, exportParams, importBody, bulkIdsBody,
+} = require('../helpers');
+
+const inquiriesPaths = {
+  '/inquiries/stats': {
+    get: op('get', ['Inquiries'], 'Inquiry statistics', { operationId: 'inquiriesStats' }),
+  },
+  '/inquiries/export': {
+    get: op('get', ['Inquiries'], 'Export inquiries', {
+      operationId: 'inquiriesExport',
+      parameters: exportParams(),
+    }),
+  },
+  '/inquiries/import': {
+    post: op('post', ['Inquiries'], 'Import inquiries from CSV or JSON', {
+      operationId: 'inquiriesImport',
+      requestBody: importBody(),
+      successDescription: 'Inquiries imported',
+    }),
+  },
+  '/inquiries': {
+    get: op('get', ['Inquiries'], 'List inquiries', {
+      operationId: 'inquiriesList',
+      parameters: paginationParams([
+        { name: 'status', in: 'query', schema: { type: 'string', enum: ['pending', 'converted'] } },
+        { name: 'startDate', in: 'query', schema: { type: 'string', format: 'date' } },
+        { name: 'endDate', in: 'query', schema: { type: 'string', format: 'date' } },
+      ]),
+      responseSchema: 'PaginatedList',
+    }),
+    post: op('post', ['Inquiries'], 'Create inquiry', {
+      operationId: 'inquiriesCreate',
+      requestBody: jsonBody('CreateInquiryRequest'),
+      successDescription: 'Inquiry created',
+    }),
+  },
+  '/inquiries/bulk-delete': {
+    post: op('post', ['Inquiries'], 'Bulk delete inquiries', {
+      operationId: 'inquiriesBulkDelete',
+      requestBody: bulkIdsBody(),
+    }),
+  },
+  '/inquiries/bulk-update': {
+    patch: op('patch', ['Inquiries'], 'Bulk update inquiry status', {
+      operationId: 'inquiriesBulkUpdate',
+      requestBody: jsonBody('BulkUpdateInquiriesRequest', true, { ids: [1], status: 'converted' }),
+    }),
+  },
+  '/inquiries/{id}': {
+    get: op('get', ['Inquiries'], 'Get inquiry by ID', {
+      operationId: 'inquiriesGetById',
+      parameters: [idParam()],
+      responseSchema: 'Inquiry',
+    }),
+    patch: op('patch', ['Inquiries'], 'Update inquiry', {
+      operationId: 'inquiriesUpdate',
+      parameters: [idParam()],
+      requestBody: jsonBody('CreateInquiryRequest'),
+    }),
+    delete: op('delete', ['Inquiries'], 'Delete inquiry', {
+      operationId: 'inquiriesDelete',
+      parameters: [idParam()],
+    }),
+  },
+  '/inquiries/{id}/convert': {
+    post: op('post', ['Inquiries'], 'Convert inquiry to event', {
+      operationId: 'inquiriesConvert',
+      parameters: [idParam()],
+      successDescription: 'Inquiry converted to event',
+    }),
+  },
+};
+
+const menuPaths = {
+  '/menu/categories': {
+    get: op('get', ['Menu'], 'List menu categories', {
+      operationId: 'menuCategoriesList',
+      parameters: paginationParams(),
+      responseSchema: 'PaginatedList',
+    }),
+    post: op('post', ['Menu'], 'Create menu category', {
+      operationId: 'menuCategoriesCreate',
+      requestBody: jsonBody('CreateMenuCategoryRequest'),
+      successDescription: 'Category created',
+    }),
+  },
+  '/menu/categories/export': {
+    get: op('get', ['Menu'], 'Export categories', {
+      operationId: 'menuCategoriesExport',
+      parameters: exportParams(),
+    }),
+  },
+  '/menu/categories/import': {
+    post: op('post', ['Menu'], 'Import categories', {
+      operationId: 'menuCategoriesImport',
+      requestBody: importBody(),
+    }),
+  },
+  '/menu/categories/bulk-delete': {
+    post: op('post', ['Menu'], 'Bulk delete categories', {
+      operationId: 'menuCategoriesBulkDelete',
+      requestBody: bulkIdsBody(),
+    }),
+  },
+  '/menu/categories/bulk-update': {
+    patch: op('patch', ['Menu'], 'Bulk update categories', {
+      operationId: 'menuCategoriesBulkUpdate',
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              allOf: [
+                { $ref: '#/components/schemas/BulkIdsRequest' },
+                { type: 'object', required: ['sort_order'], properties: { sort_order: { type: 'integer', minimum: 0 } } },
+              ],
+            },
+          },
+        },
+      },
+    }),
+  },
+  '/menu/categories/{id}': {
+    get: op('get', ['Menu'], 'Get category by ID', {
+      operationId: 'menuCategoriesGetById',
+      parameters: [idParam()],
+      responseSchema: 'MenuCategory',
+    }),
+    patch: op('patch', ['Menu'], 'Update category', {
+      operationId: 'menuCategoriesUpdate',
+      parameters: [idParam()],
+      requestBody: jsonBody('CreateMenuCategoryRequest'),
+    }),
+    delete: op('delete', ['Menu'], 'Delete category', {
+      operationId: 'menuCategoriesDelete',
+      parameters: [idParam()],
+    }),
+  },
+  '/menu/items': {
+    get: op('get', ['Menu'], 'List menu items', {
+      operationId: 'menuItemsList',
+      parameters: paginationParams(),
+      responseSchema: 'PaginatedList',
+    }),
+    post: op('post', ['Menu'], 'Create menu item', {
+      operationId: 'menuItemsCreate',
+      requestBody: jsonBody('CreateMenuItemRequest'),
+      successDescription: 'Item created',
+    }),
+  },
+  '/menu/items/export': {
+    get: op('get', ['Menu'], 'Export menu items', {
+      operationId: 'menuItemsExport',
+      parameters: exportParams(),
+    }),
+  },
+  '/menu/items/import': {
+    post: op('post', ['Menu'], 'Import menu items', {
+      operationId: 'menuItemsImport',
+      requestBody: importBody(),
+    }),
+  },
+  '/menu/items/bulk-delete': {
+    post: op('post', ['Menu'], 'Bulk delete menu items', {
+      operationId: 'menuItemsBulkDelete',
+      requestBody: bulkIdsBody(),
+    }),
+  },
+  '/menu/items/bulk-update': {
+    patch: op('patch', ['Menu'], 'Bulk update menu items', {
+      operationId: 'menuItemsBulkUpdate',
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              allOf: [
+                { $ref: '#/components/schemas/BulkIdsRequest' },
+                {
+                  type: 'object',
+                  properties: {
+                    isActive: { type: 'boolean' },
+                    categoryId: { type: 'integer' },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    }),
+  },
+  '/menu/items/{id}': {
+    get: op('get', ['Menu'], 'Get menu item by ID', {
+      operationId: 'menuItemsGetById',
+      parameters: [idParam()],
+      responseSchema: 'MenuItem',
+    }),
+    patch: op('patch', ['Menu'], 'Update menu item', {
+      operationId: 'menuItemsUpdate',
+      parameters: [idParam()],
+      requestBody: jsonBody('CreateMenuItemRequest'),
+    }),
+    delete: op('delete', ['Menu'], 'Delete menu item', {
+      operationId: 'menuItemsDelete',
+      parameters: [idParam()],
+    }),
+  },
+  '/menu/packages': {
+    get: op('get', ['Menu'], 'List menu packages', { operationId: 'menuPackagesList' }),
+  },
+  '/menu/courses': {
+    get: op('get', ['Menu'], 'List menu courses', { operationId: 'menuCoursesList' }),
+  },
+};
+
+module.exports = { inquiriesPaths, menuPaths };

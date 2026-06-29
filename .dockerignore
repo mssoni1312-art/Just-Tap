@@ -1,0 +1,31 @@
+# Dependencies
+node_modules
+npm-debug.log
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+
+# Git
+.git
+.gitignore
+
+# Logs and runtime
+logs
+*.log
+
+# IDE
+.idea
+.vscode
+.cursor
+
+# Docker
+docker-compose.override.yml
+
+# Docs / dev artifacts
+README.md
+agent-transcripts
+
+# Test
+coverage
