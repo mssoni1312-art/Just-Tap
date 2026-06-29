@@ -40,7 +40,9 @@ async function getReadiness() {
     checks.redis = { status: 'down', error: err.message };
   }
 
-  const ready = checks.database.status === 'up' && checks.redis.status === 'up';
+  // Only require database to be up. Redis is optional if SKIP_REDIS is set.
+  const skipRedis = process.env.SKIP_REDIS === 'true';
+  const ready = checks.database.status === 'up' && (skipRedis || checks.redis.status === 'up');
 
   return {
     status: ready ? 'ready' : 'not_ready',
@@ -66,3 +68,4 @@ module.exports = {
   getLiveness,
   getReadiness,
 };
+
