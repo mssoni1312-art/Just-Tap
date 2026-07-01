@@ -107,6 +107,7 @@ async function runSqlFiles(connection, { dir, tableName, label, transform }) {
     }
 
     await executeSqlFile(connection, file, sql);
+    await connection.query(`USE \`${DB_NAME}\``);
     await recordApplied(connection, tableName, file);
     console.log(`  ✓ ${file}`);
   }
