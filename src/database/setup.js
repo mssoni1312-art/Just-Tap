@@ -31,26 +31,40 @@ async function ensureDatabase(connection) {
 }
 
 async function ensureTrackingTable(connection, tableName) {
-  await connection.query(`
-    CREATE TABLE IF NOT EXISTS ${tableName} (
-      filename VARCHAR(255) NOT NULL,
-      applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (filename)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-  `);
+  try {
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS ${tableName} (
+        filename VARCHAR(255) NOT NULL,
+        applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (filename)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+  } catch (err) {
+    // If table creation fails, try to check if it exists
+    try {
+      await connection.query(`SELECT 1 FROM ${tableName} LIMIT 1`);
+    } catch (checkErr) {
+      // Table doesn't exist and we can't create it - this is a real error
+      throw err;
+    }
+  }
 }
 
 async function getAppliedFiles(connection, tableName) {
-  const [rows] = await connection.query(`SELECT filename FROM ${tableName}`);
-  return new Set(rows.map((row) => row.filename));
+  try {
+    const [rows] = await connection.query(`SELECT filename FROM ${tableName}`);
+    return new Set(rows.map((row) => row.filename));
+  } catch (err) {
+    // If table doesn't exist, return empty set
+    if (err.code === 'ER_NO_SUCH_TABLE') {
+      return new Set();
+    }
+    throw err;
+  }
 }
 
 async function recordApplied(connection, tableName, filename) {
   await connection.query(`INSERT INTO ${tableName} (filename) VALUES (?)`, [filename]);
-}
-
-function stripUseDatabase(sql) {
-  return sql.replace(/USE\s+[`']?[\w]+[`']?\s*;/gi, '').trim();
 }
 
 function parseTriggerStatements(sql) {
@@ -110,10 +124,18 @@ async function runSqlFiles(connection, { dir, tableName, label, transform }) {
       sql = await transform(file, sql);
     }
 
-    await executeSqlFile(connection, file, sql);
-    await connection.query(`USE \`${DB_NAME}\``);
-    await recordApplied(connection, tableName, file);
-    console.log(`  ✓ ${file}`);
+    try {
+      await executeSqlFile(connection, file, sql);
+      await recordApplied(connection, tableName, file);
+      console.log(`  ✓ ${file}`);
+    } catch (err) {
+      // If it's a duplicate entry error, the migration was already applied
+      if (err.code === 'ER_DUP_ENTRY') {
+        console.log(`  ✓ ${file} (already applied)`);
+      } else {
+        throw err;
+      }
+    }
   }
 }
 
@@ -122,7 +144,6 @@ async function runMigrations(connection) {
     dir: MIGRATIONS_DIR,
     tableName: 'schema_migrations',
     label: 'migrations',
-    transform: async (_file, sql) => stripUseDatabase(sql),
   });
 }
 
@@ -214,3 +235,4 @@ runners[command]().catch((err) => {
 });
 
 module.exports = { setup, migrate, seed };
+
