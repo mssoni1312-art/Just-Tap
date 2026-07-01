@@ -2,54 +2,65 @@ const billingRepository = require('../repositories/billing.repository');
 const eventRepository = require('../repositories/event.repository');
 const activityRepository = require('../repositories/activity.repository');
 const { resolveId } = require('../helpers/idResolver');
+const { toMysqlDate, toMysqlTime, toMysqlDateTime } = require('../helpers/mysqlFormat');
 const AppError = require('../utils/AppError');
 
-const toMysqlTime = (value) => {
-  if (value === undefined || value === null) return null;
-
-  const trimmed = String(value).trim();
-  if (!trimmed) return null;
-
-  if (/^\d{1,2}:\d{2}:\d{2}$/.test(trimmed)) {
-    return trimmed;
+async function resolveEventFunctionId(eventFunctionId) {
+  if (eventFunctionId === undefined || eventFunctionId === null || eventFunctionId === '') {
+    return null;
   }
 
-  if (/^\d{1,2}:\d{2}$/.test(trimmed)) {
-    const [hour, minute] = trimmed.split(':');
-    return `${hour.padStart(2, '0')}:${minute}:00`;
+  if (typeof eventFunctionId === 'string') {
+    if (eventFunctionId.includes('-')) {
+      return resolveId('event_functions', eventFunctionId);
+    }
+    if (/^\d+$/.test(eventFunctionId)) {
+      return Number(eventFunctionId);
+    }
   }
 
-  const match = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  if (match) {
-    let hour = Number(match[1]);
-    const minute = match[2];
-    const period = match[3].toUpperCase();
-    if (period === 'PM' && hour !== 12) hour += 12;
-    if (period === 'AM' && hour === 12) hour = 0;
-    return `${String(hour).padStart(2, '0')}:${minute}:00`;
-  }
-
-  return trimmed;
-};
+  return eventFunctionId;
+}
 
 async function normalizeBillingPayload(data) {
-  const functions = await Promise.all((data.functions || []).map(async (fn) => {
-    let eventFunctionId = fn.eventFunctionId;
-    if (eventFunctionId && typeof eventFunctionId === 'string' && eventFunctionId.includes('-')) {
-      eventFunctionId = await resolveId('event_functions', eventFunctionId);
-    }
+  const functions = await Promise.all((data.functions || []).map(async (fn) => ({
+    ...fn,
+    eventFunctionId: await resolveEventFunctionId(fn.eventFunctionId),
+    date: toMysqlDate(fn.date),
+    startTime: toMysqlTime(fn.startTime),
+  })));
 
-    return {
-      ...fn,
-      eventFunctionId: eventFunctionId || null,
-      startTime: toMysqlTime(fn.startTime),
-    };
+  const payments = (data.payments || []).map((payment) => ({
+    ...payment,
+    paidAt: toMysqlDateTime(payment.paidAt),
   }));
 
   return {
     ...data,
     functions,
+    payments,
   };
+}
+
+async function validateEventFunctionIds(eventId, functions) {
+  const functionIds = [...new Set(
+    functions
+      .map((fn) => fn.eventFunctionId)
+      .filter((id) => id != null)
+      .map((id) => Number(id))
+      .filter((id) => Number.isInteger(id) && id > 0),
+  )];
+
+  if (!functionIds.length) return;
+
+  const eventFunctions = await eventRepository.getFunctions(eventId);
+  const validIds = new Set(eventFunctions.map((fn) => Number(fn.id)));
+
+  for (const functionId of functionIds) {
+    if (!validIds.has(functionId)) {
+      throw new AppError(`Invalid eventFunctionId: ${functionId}`, 400);
+    }
+  }
 }
 
 const emptyBilling = (eventId) => ({
@@ -119,7 +130,9 @@ const billingService = {
     const event = await eventRepository.findById(eventId);
     if (!event) throw new AppError('Event not found', 404);
 
-    const billingId = await billingRepository.save(eventId, await normalizeBillingPayload(data));
+    const payload = await normalizeBillingPayload(data);
+    await validateEventFunctionIds(eventId, payload.functions);
+    const billingId = await billingRepository.save(eventId, payload);
     const billing = await billingRepository.findByEventId(eventId);
 
     await activityRepository.log({

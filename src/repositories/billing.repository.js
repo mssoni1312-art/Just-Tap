@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { toMysqlDate, toMysqlTime, toMysqlDateTime } = require('../helpers/mysqlFormat');
 
 const toNumber = (value) => (value != null ? Number(value) : null);
 
@@ -65,7 +66,7 @@ const billingRepository = {
         eventFunctionId: row.event_function_id ? String(row.event_function_id) : null,
         name: row.name,
         date: row.function_date,
-        startTime: row.start_time,
+        startTime: toMysqlTime(row.start_time),
         pax: row.pax,
         extraCharges: toNumber(row.extra_charges) || 0,
         ratePerPlate: toNumber(row.rate_per_plate),
@@ -103,7 +104,7 @@ const billingRepository = {
       await conn.beginTransaction();
 
       const [existing] = await conn.execute(
-        `SELECT id FROM event_billing WHERE event_id = ? AND deleted_at IS NULL LIMIT 1`,
+        `SELECT id, deleted_at FROM event_billing WHERE event_id = ? LIMIT 1`,
         [eventId]
       );
 
@@ -124,6 +125,9 @@ const billingRepository = {
 
       if (existing.length) {
         billingId = existing[0].id;
+        if (existing[0].deleted_at) {
+          await conn.execute('UPDATE event_billing SET deleted_at = NULL WHERE id = ?', [billingId]);
+        }
         await conn.execute(
           `UPDATE event_billing SET
             show_to_client = ?,
@@ -152,6 +156,13 @@ const billingRepository = {
       }
 
       await conn.execute(
+        `UPDATE event_billing_function_charges c
+         INNER JOIN event_billing_functions f ON f.id = c.billing_function_id
+         SET c.deleted_at = NOW()
+         WHERE f.billing_id = ? AND c.deleted_at IS NULL AND f.deleted_at IS NULL`,
+        [billingId]
+      );
+      await conn.execute(
         'UPDATE event_billing_functions SET deleted_at = NOW() WHERE billing_id = ? AND deleted_at IS NULL',
         [billingId]
       );
@@ -171,8 +182,8 @@ const billingRepository = {
             billingId,
             fn.eventFunctionId || null,
             fn.name,
-            fn.date || null,
-            fn.startTime || null,
+            toMysqlDate(fn.date),
+            toMysqlTime(fn.startTime),
             fn.pax ?? null,
             fn.extraCharges ?? 0,
             fn.ratePerPlate ?? null,
@@ -200,7 +211,7 @@ const billingRepository = {
           [
             billingId,
             payment.amount ?? 0,
-            payment.paidAt || null,
+            toMysqlDateTime(payment.paidAt),
             payment.description || null,
             i,
           ]
