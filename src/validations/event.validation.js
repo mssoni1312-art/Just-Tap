@@ -2,6 +2,7 @@ const Joi = require('joi');
 const { idParamSchema, eventIdParam, bulkIdsSchema } = require('./common.validation');
 
 const eventStatuses = ['inquiry', 'confirmed', 'cancelled', 'r_menu', 'live', 'tentative'];
+const eventMetaStatuses = ['inquiry', 'tentative', 'confirmed'];
 
 const listEventsSchema = Joi.object({
   page: Joi.number().integer().min(1),
@@ -25,7 +26,6 @@ const functionSchema = Joi.object({
   date: Joi.date().iso().allow(null),
   startTime: Joi.string().allow(null, ''),
   endTime: Joi.string().allow(null, ''),
-  pax: Joi.number().integer().min(0).allow(null),
   rate: Joi.number().min(0).allow(null),
 });
 
@@ -164,4 +164,5 @@ module.exports = {
   functionIdParamSchema,
   tableNumberParamSchema,
   eventStatuses,
+  eventMetaStatuses,
 };

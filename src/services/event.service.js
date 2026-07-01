@@ -4,7 +4,7 @@ const activityRepository = require('../repositories/activity.repository');
 const clientRepository = require('../repositories/client.repository');
 const { resolveId, resolveIds } = require('../helpers/idResolver');
 const { sendExport } = require('../helpers/exportImport');
-const { eventStatuses } = require('../validations/event.validation');
+const { eventStatuses, eventMetaStatuses } = require('../validations/event.validation');
 const AppError = require('../utils/AppError');
 
 const EVENT_EXPORT_COLUMNS = [
@@ -434,7 +434,7 @@ const eventService = {
 
   getMeta() {
     return {
-      statuses: eventStatuses,
+      statuses: eventMetaStatuses,
     };
   },
 };

@@ -3453,6 +3453,270 @@
         }
       }
     },
+    "/events/{eventId}/billing": {
+      "get": {
+        "tags": [
+          "Events",
+          "Billing"
+        ],
+        "summary": "Get billing & finances for event",
+        "description": "",
+        "operationId": "eventBillingGet",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Event ID (numeric or UUID)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/EventBilling"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/events/{eventId}/billing/preview": {
+      "get": {
+        "tags": [
+          "Events",
+          "Billing"
+        ],
+        "summary": "Get client-visible billing preview",
+        "description": "",
+        "operationId": "eventBillingClientPreview",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Event ID (numeric or UUID)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Billing visible in client app when showToClient is enabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/EventBillingClientPreview"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/events/{eventId}/billing/save-preview": {
+      "put": {
+        "tags": [
+          "Events",
+          "Billing"
+        ],
+        "summary": "Save billing and publish to client app preview",
+        "description": "",
+        "operationId": "eventBillingSavePreview",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Event ID (numeric or UUID)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveBillingPreviewRequest"
+              },
+              "example": {
+                "showToClient": true,
+                "functions": [
+                  {
+                    "name": "Dinner",
+                    "date": "2025-06-12",
+                    "startTime": "08:00 PM",
+                    "pax": 850,
+                    "extraCharges": 0,
+                    "ratePerPlate": 0,
+                    "amount": 0,
+                    "charges": []
+                  }
+                ],
+                "estimate": {
+                  "cgstPercent": 0,
+                  "cgstAmount": 0,
+                  "sgstPercent": 0,
+                  "sgstAmount": 0,
+                  "discount": 0,
+                  "roundOff": 0,
+                  "grandTotal": 1074410
+                },
+                "payments": [
+                  {
+                    "amount": 0,
+                    "paidAt": null,
+                    "description": "Bank Transfer"
+                  }
+                ],
+                "notes": ""
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Billing saved; visible in client app when showToClient is true",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/EventBilling"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
     "/inquiries/stats": {
       "get": {
         "tags": [
@@ -10699,6 +10963,253 @@
             "items": {
               "$ref": "#/components/schemas/IdParam"
             }
+          }
+        }
+      },
+      "BillingFunctionCharge": {
+        "type": "object",
+        "required": [
+          "label",
+          "amount"
+        ],
+        "properties": {
+          "label": {
+            "type": "string",
+            "example": "Decoration"
+          },
+          "amount": {
+            "type": "number",
+            "example": 5000
+          }
+        }
+      },
+      "BillingFunction": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "eventFunctionId": {
+            "$ref": "#/components/schemas/IdParam",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "example": "Dinner"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "example": "2025-06-12"
+          },
+          "startTime": {
+            "type": "string",
+            "example": "08:00 PM"
+          },
+          "pax": {
+            "type": "integer",
+            "example": 850
+          },
+          "extraCharges": {
+            "type": "number",
+            "example": 0
+          },
+          "ratePerPlate": {
+            "type": "number",
+            "example": 1250
+          },
+          "amount": {
+            "type": "number",
+            "example": 1062500
+          },
+          "charges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillingFunctionCharge"
+            }
+          }
+        }
+      },
+      "BillingEstimate": {
+        "type": "object",
+        "properties": {
+          "cgstPercent": {
+            "type": "number",
+            "example": 2.5
+          },
+          "cgstAmount": {
+            "type": "number",
+            "example": 26860
+          },
+          "sgstPercent": {
+            "type": "number",
+            "example": 2.5
+          },
+          "sgstAmount": {
+            "type": "number",
+            "example": 26860
+          },
+          "discount": {
+            "type": "number",
+            "example": 0
+          },
+          "roundOff": {
+            "type": "number",
+            "example": -10
+          },
+          "grandTotal": {
+            "type": "number",
+            "example": 1074410
+          }
+        }
+      },
+      "BillingPayment": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "example": 500000
+          },
+          "paidAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "example": "Bank Transfer"
+          }
+        }
+      },
+      "SaveBillingPreviewRequest": {
+        "type": "object",
+        "properties": {
+          "showToClient": {
+            "type": "boolean",
+            "default": false,
+            "description": "When true, billing is visible in the client app"
+          },
+          "functions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillingFunction"
+            }
+          },
+          "estimate": {
+            "$ref": "#/components/schemas/BillingEstimate"
+          },
+          "payments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillingPayment"
+            }
+          },
+          "notes": {
+            "type": "string",
+            "example": "Add notes here..."
+          }
+        }
+      },
+      "EventBilling": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string",
+            "nullable": true
+          },
+          "clientName": {
+            "type": "string"
+          },
+          "showToClient": {
+            "type": "boolean"
+          },
+          "functions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillingFunction"
+            }
+          },
+          "estimate": {
+            "$ref": "#/components/schemas/BillingEstimate"
+          },
+          "payments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillingPayment"
+            }
+          },
+          "totalPaid": {
+            "type": "number"
+          },
+          "remainingPayment": {
+            "type": "number"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "previewedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "EventBillingClientPreview": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string"
+          },
+          "clientName": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "functions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillingFunction"
+            }
+          },
+          "estimate": {
+            "$ref": "#/components/schemas/BillingEstimate"
+          },
+          "payments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillingPayment"
+            }
+          },
+          "totalPaid": {
+            "type": "number"
+          },
+          "remainingPayment": {
+            "type": "number"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "previewedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           }
         }
       },

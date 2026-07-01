@@ -119,6 +119,47 @@ const menuPlanningSchema = Joi.object({
   menuItemIds: Joi.array().items(idParam).min(1).required(),
 });
 
+const billingFunctionChargeSchema = Joi.object({
+  label: Joi.string().required(),
+  amount: Joi.number().min(0).default(0),
+});
+
+const billingFunctionSchema = Joi.object({
+  eventFunctionId: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid()).allow(null),
+  name: Joi.string().required(),
+  date: Joi.date().iso().allow(null),
+  startTime: Joi.string().allow(null, ''),
+  pax: Joi.number().integer().min(0).allow(null),
+  extraCharges: Joi.number().min(0).default(0),
+  ratePerPlate: Joi.number().min(0).allow(null),
+  amount: Joi.number().min(0).allow(null),
+  charges: Joi.array().items(billingFunctionChargeSchema).default([]),
+});
+
+const billingPaymentSchema = Joi.object({
+  amount: Joi.number().min(0).default(0),
+  paidAt: Joi.date().iso().allow(null),
+  description: Joi.string().allow(null, ''),
+});
+
+const billingEstimateSchema = Joi.object({
+  cgstPercent: Joi.number().min(0).max(100).allow(null),
+  cgstAmount: Joi.number().min(0).allow(null),
+  sgstPercent: Joi.number().min(0).max(100).allow(null),
+  sgstAmount: Joi.number().min(0).allow(null),
+  discount: Joi.number().min(0).default(0),
+  roundOff: Joi.number().allow(null),
+  grandTotal: Joi.number().min(0).allow(null),
+});
+
+const saveBillingPreviewSchema = Joi.object({
+  showToClient: Joi.boolean().default(false),
+  functions: Joi.array().items(billingFunctionSchema).default([]),
+  estimate: billingEstimateSchema.default({}),
+  payments: Joi.array().items(billingPaymentSchema).default([]),
+  notes: Joi.string().allow(null, '').default(''),
+});
+
 const tableAssignmentSchema = Joi.object({
   tableNumber: Joi.number().integer().required(),
   allocationType: Joi.string().valid('dining', 'captain'),
@@ -252,6 +293,7 @@ module.exports = {
   importRecordsSchema,
   exportQuerySchema,
   menuPlanningSchema,
+  saveBillingPreviewSchema,
   tableAssignmentSchema,
   bulkTablesSchema,
   tableAllocationSchema,

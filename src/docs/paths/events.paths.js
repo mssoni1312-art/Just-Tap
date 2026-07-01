@@ -230,6 +230,55 @@ const eventsPaths = {
       parameters: [eventIdParam, ...exportParams().slice(2)],
     }),
   },
+  '/events/{eventId}/billing': {
+    get: op('get', ['Events', 'Billing'], 'Get billing & finances for event', {
+      operationId: 'eventBillingGet',
+      parameters: [eventIdParam],
+      responseSchema: 'EventBilling',
+    }),
+  },
+  '/events/{eventId}/billing/preview': {
+    get: op('get', ['Events', 'Billing'], 'Get client-visible billing preview', {
+      operationId: 'eventBillingClientPreview',
+      parameters: [eventIdParam],
+      responseSchema: 'EventBillingClientPreview',
+      successDescription: 'Billing visible in client app when showToClient is enabled',
+    }),
+  },
+  '/events/{eventId}/billing/save-preview': {
+    put: op('put', ['Events', 'Billing'], 'Save billing and publish to client app preview', {
+      operationId: 'eventBillingSavePreview',
+      parameters: [eventIdParam],
+      requestBody: jsonBody('SaveBillingPreviewRequest', true, {
+        showToClient: true,
+        functions: [
+          {
+            name: 'Dinner',
+            date: '2025-06-12',
+            startTime: '08:00 PM',
+            pax: 850,
+            extraCharges: 0,
+            ratePerPlate: 0,
+            amount: 0,
+            charges: [],
+          },
+        ],
+        estimate: {
+          cgstPercent: 0,
+          cgstAmount: 0,
+          sgstPercent: 0,
+          sgstAmount: 0,
+          discount: 0,
+          roundOff: 0,
+          grandTotal: 1074410,
+        },
+        payments: [{ amount: 0, paidAt: null, description: 'Bank Transfer' }],
+        notes: '',
+      }),
+      responseSchema: 'EventBilling',
+      successDescription: 'Billing saved; visible in client app when showToClient is true',
+    }),
+  },
 };
 
 module.exports = eventsPaths;

@@ -7,6 +7,7 @@ const eventController = require('../controllers/event.controller');
 const menuController = require('../controllers/menu.controller');
 const taskController = require('../controllers/task.controller');
 const feedbackController = require('../controllers/feedback.controller');
+const billingController = require('../controllers/billing.controller');
 const domain = require('../controllers/domain.controller');
 const {
   listEventsSchema,
@@ -23,6 +24,7 @@ const {
 } = require('../validations/event.validation');
 const {
   menuPlanningSchema,
+  saveBillingPreviewSchema,
   bulkTablesSchema,
   tableAssignmentSchema,
   tableAllocationSchema,
@@ -60,6 +62,10 @@ router.delete('/:eventId/functions/:functionId', validate(functionIdParamSchema,
 
 router.get('/:eventId/menu-planning', validate(eventIdParam, 'params'), asyncHandler(menuController.getPlanning));
 router.put('/:eventId/menu-planning', validate(eventIdParam, 'params'), validate(menuPlanningSchema), asyncHandler(menuController.updatePlanning));
+
+router.get('/:eventId/billing', validate(eventIdParam, 'params'), asyncHandler(billingController.get));
+router.get('/:eventId/billing/preview', validate(eventIdParam, 'params'), asyncHandler(billingController.getClientPreview));
+router.put('/:eventId/billing/save-preview', validate(eventIdParam, 'params'), validate(saveBillingPreviewSchema), asyncHandler(billingController.savePreview));
 
 router.get('/:eventId/tables', validate(eventIdParam, 'params'), asyncHandler(domain.table.get));
 router.put('/:eventId/tables', validate(eventIdParam, 'params'), validate(bulkTablesSchema), asyncHandler(domain.table.bulkSave));
