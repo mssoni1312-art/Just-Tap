@@ -1,7 +1,5 @@
 -- Migration 016: Event billing & finances (Save & Preview for client app)
 
-USE justtap;
-
 CREATE TABLE IF NOT EXISTS event_billing (
   id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   event_id      BIGINT UNSIGNED NOT NULL,

@@ -49,6 +49,10 @@ async function recordApplied(connection, tableName, filename) {
   await connection.query(`INSERT INTO ${tableName} (filename) VALUES (?)`, [filename]);
 }
 
+function stripUseDatabase(sql) {
+  return sql.replace(/USE\s+[`']?[\w]+[`']?\s*;/gi, '').trim();
+}
+
 function parseTriggerStatements(sql) {
   const cleaned = sql
     .split('\n')
@@ -118,6 +122,7 @@ async function runMigrations(connection) {
     dir: MIGRATIONS_DIR,
     tableName: 'schema_migrations',
     label: 'migrations',
+    transform: async (_file, sql) => stripUseDatabase(sql),
   });
 }
 
