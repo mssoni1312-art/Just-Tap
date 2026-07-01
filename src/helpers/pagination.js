@@ -23,6 +23,7 @@ const ALLOWED_SORT_COLUMNS = {
   menu_items: ['name', 'price', 'created_at', 'category_id'],
   feedback: ['created_at', 'rating', 'client_name'],
   staff: ['name', 'role', 'created_at'],
+  clients: ['name', 'city_name', 'created_at'],
   task_templates: ['name', 'category', 'created_at'],
   event_tasks: ['due_date', 'status', 'created_at', 'title'],
 };

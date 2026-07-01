@@ -45,6 +45,18 @@ module.exports = {
 
   listPackages: async (_req, res) => sendSuccess(res, await menuService.listPackages()),
   listCourses: async (_req, res) => sendSuccess(res, await menuService.listCourses()),
+
+  getManagePackages: async (_req, res) => sendSuccess(res, await menuService.getManagePackages()),
+  createPackageFeature: async (req, res) => sendSuccess(res, await menuService.createPackageFeature(req.body), 'Feature created', 201),
+  updatePackageFeature: async (req, res) => sendSuccess(res, await menuService.updatePackageFeature(req.params.id, req.body)),
+  deletePackageFeature: async (req, res) => sendSuccess(res, await menuService.deletePackageFeature(req.params.id)),
+
+  getPackage: async (req, res) => sendSuccess(res, await menuService.getPackage(req.params.id)),
+  createPackage: async (req, res) => sendSuccess(res, await menuService.createPackage(req.body), 'Package created', 201),
+  updatePackage: async (req, res) => sendSuccess(res, await menuService.updatePackage(req.params.id, req.body)),
+  deletePackage: async (req, res) => sendSuccess(res, await menuService.deletePackage(req.params.id)),
+  savePackageSettings: async (req, res) => sendSuccess(res, await menuService.savePackageSettings(req.body), 'Package settings saved'),
+
   getPlanning: async (req, res) => sendSuccess(res, await menuService.getPlanning(req.params.eventId, req.query.category)),
   updatePlanning: async (req, res) => sendSuccess(res, await menuService.updatePlanning(req.params.eventId, req.body.menuItemIds)),
 };

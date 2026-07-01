@@ -131,19 +131,54 @@ CREATE TABLE IF NOT EXISTS menu_categories (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS menu_packages (
-  id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  uuid       CHAR(36)        NOT NULL DEFAULT (UUID()),
-  name       VARCHAR(100)    NOT NULL,
-  slug       VARCHAR(100)    NOT NULL,
-  type       ENUM('premium', 'silver', 'gold', 'custom') NOT NULL,
-  created_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  deleted_at DATETIME        NULL,
+  id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  uuid            CHAR(36)        NOT NULL DEFAULT (UUID()),
+  name            VARCHAR(100)    NOT NULL,
+  slug            VARCHAR(100)    NOT NULL,
+  type            ENUM('premium', 'silver', 'gold', 'custom') NOT NULL,
+  price           DECIMAL(12, 2)  NULL,
+  is_most_popular TINYINT(1)      NOT NULL DEFAULT 0,
+  sort_order      INT UNSIGNED    NOT NULL DEFAULT 0,
+  is_active       TINYINT(1)      NOT NULL DEFAULT 1,
+  created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at      DATETIME        NULL,
   PRIMARY KEY (id),
   UNIQUE KEY uk_menu_packages_uuid (uuid),
   UNIQUE KEY uk_menu_packages_slug (slug),
   KEY idx_menu_packages_type (type),
   KEY idx_menu_packages_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS package_features (
+  id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  uuid       CHAR(36)        NOT NULL DEFAULT (UUID()),
+  name       VARCHAR(150)    NOT NULL,
+  is_active  TINYINT(1)      NOT NULL DEFAULT 1,
+  sort_order INT UNSIGNED    NOT NULL DEFAULT 0,
+  created_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at DATETIME        NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_package_features_uuid (uuid),
+  KEY idx_package_features_sort (sort_order),
+  KEY idx_package_features_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS menu_package_features (
+  id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  package_id BIGINT UNSIGNED NOT NULL,
+  feature_id BIGINT UNSIGNED NOT NULL,
+  created_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at DATETIME        NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_package_feature (package_id, feature_id),
+  KEY idx_mpf_feature (feature_id),
+  CONSTRAINT fk_mpf_package
+    FOREIGN KEY (package_id) REFERENCES menu_packages (id) ON DELETE CASCADE,
+  CONSTRAINT fk_mpf_feature
+    FOREIGN KEY (feature_id) REFERENCES package_features (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS menu_items (
@@ -186,6 +221,24 @@ CREATE TABLE IF NOT EXISTS menu_package_items (
 -- Migration 004: Inquiries & events
 USE justtap;
 
+CREATE TABLE IF NOT EXISTS clients (
+  id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  uuid             CHAR(36)        NOT NULL DEFAULT (UUID()),
+  name             VARCHAR(150)    NOT NULL,
+  caterer_name     VARCHAR(150)    NOT NULL,
+  city_name        VARCHAR(100)    NOT NULL,
+  contact_no       VARCHAR(20)     NULL,
+  reference        VARCHAR(150)    NOT NULL,
+  is_high_priority TINYINT(1)      NOT NULL DEFAULT 0,
+  created_at       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at       DATETIME        NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_clients_uuid (uuid),
+  KEY idx_clients_name (name),
+  KEY idx_clients_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS inquiries (
   id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   uuid               CHAR(36)        NOT NULL DEFAULT (UUID()),
@@ -218,18 +271,43 @@ CREATE TABLE IF NOT EXISTS events (
   id                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   uuid                 CHAR(36)        NOT NULL DEFAULT (UUID()),
   inquiry_id           BIGINT UNSIGNED NULL,
+  client_id            BIGINT UNSIGNED NULL,
   client_name          VARCHAR(150)    NOT NULL,
   client_mobile        VARCHAR(20)     NULL,
+  caterer_name         VARCHAR(150)    NULL,
+  reference            VARCHAR(150)    NULL,
+  is_high_priority     TINYINT(1)      NOT NULL DEFAULT 0,
   venue_name           VARCHAR(255)    NOT NULL,
   city_name            VARCHAR(100)    NOT NULL,
   inquiry_date         DATE            NULL,
   start_date           DATE            NOT NULL,
   end_date             DATE            NOT NULL,
   event_function_name  VARCHAR(150)    NULL,
-  status               ENUM('inquiry', 'confirmed', 'cancelled', 'r_menu', 'live') NOT NULL DEFAULT 'inquiry',
+  status               ENUM('inquiry', 'confirmed', 'cancelled', 'r_menu', 'live', 'tentative') NOT NULL DEFAULT 'inquiry',
   package_id           BIGINT UNSIGNED NULL,
   assigned_manager_id  BIGINT UNSIGNED NULL,
   is_live              TINYINT(1)      NOT NULL DEFAULT 0,
+  no_of_tablets        INT UNSIGNED    NULL,
+  no_of_captains       INT UNSIGNED    NULL,
+  no_of_managers       INT UNSIGNED    NULL,
+  just_tap_rate        DECIMAL(12, 2)  NULL,
+  has_photography_videography TINYINT(1) NOT NULL DEFAULT 0,
+  photography_name     VARCHAR(150)    NULL,
+  photography_number   VARCHAR(20)     NULL,
+  photography_city     VARCHAR(100)    NULL,
+  photography_description TEXT         NULL,
+  photography_rate     DECIMAL(12, 2)  NULL,
+  client_instagram_id  VARCHAR(150)    NULL,
+  no_of_followers      INT UNSIGNED    NULL,
+  no_of_food_reels     INT UNSIGNED    NULL,
+  no_of_testimonial_reels INT UNSIGNED NULL,
+  bride_name           VARCHAR(150)    NULL,
+  bride_instagram_id   VARCHAR(150)    NULL,
+  groom_name           VARCHAR(150)    NULL,
+  groom_instagram_id   VARCHAR(150)    NULL,
+  total_rate           DECIMAL(12, 2)  NULL,
+  discount_rate        DECIMAL(5, 2)   NULL,
+  final_rate           DECIMAL(12, 2)  NULL,
   created_by           BIGINT UNSIGNED NULL,
   created_at           DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at           DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -240,11 +318,14 @@ CREATE TABLE IF NOT EXISTS events (
   KEY idx_events_date_range (start_date, end_date),
   KEY idx_events_manager (assigned_manager_id),
   KEY idx_events_inquiry (inquiry_id),
+  KEY idx_events_client (client_id),
   KEY idx_events_package (package_id),
   KEY idx_events_live (is_live),
   KEY idx_events_deleted_at (deleted_at),
   CONSTRAINT fk_events_inquiry
     FOREIGN KEY (inquiry_id) REFERENCES inquiries (id) ON DELETE SET NULL,
+  CONSTRAINT fk_events_client
+    FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE SET NULL,
   CONSTRAINT fk_events_package
     FOREIGN KEY (package_id) REFERENCES menu_packages (id) ON DELETE SET NULL,
   CONSTRAINT fk_events_manager
@@ -808,6 +889,72 @@ BEGIN
 END$$
 
 DELIMITER ;
+
+-- Migration 011: Event manager allocations (multi-select)
+USE justtap;
+
+CREATE TABLE IF NOT EXISTS event_manager_allocations (
+  id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  event_id   BIGINT UNSIGNED NOT NULL,
+  staff_id   BIGINT UNSIGNED NOT NULL,
+  created_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at DATETIME        NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_event_manager (event_id, staff_id),
+  KEY idx_ema_staff (staff_id),
+  CONSTRAINT fk_ema_event
+    FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE,
+  CONSTRAINT fk_ema_staff
+    FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO event_manager_allocations (event_id, staff_id)
+SELECT e.id, e.assigned_manager_id
+FROM events e
+WHERE e.assigned_manager_id IS NOT NULL
+  AND e.deleted_at IS NULL
+  AND NOT EXISTS (
+    SELECT 1
+    FROM event_manager_allocations ema
+    WHERE ema.event_id = e.id
+      AND ema.staff_id = e.assigned_manager_id
+      AND ema.deleted_at IS NULL
+  );
+
+-- Migration 013: Create event tab 4 fields (Just Tap Information, Photography, Just Social, Bride/Groom, Pricing)
+
+CREATE TABLE IF NOT EXISTS event_captain_allocations (
+  id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  event_id   BIGINT UNSIGNED NOT NULL,
+  staff_id   BIGINT UNSIGNED NOT NULL,
+  created_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at DATETIME        NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_event_captain (event_id, staff_id),
+  KEY idx_eca_staff (staff_id),
+  CONSTRAINT fk_eca_event
+    FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE,
+  CONSTRAINT fk_eca_staff
+    FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS event_bride_groom_images (
+  id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  event_id   BIGINT UNSIGNED NOT NULL,
+  image_url  VARCHAR(512)    NOT NULL,
+  sort_order INT UNSIGNED    NOT NULL DEFAULT 0,
+  created_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at DATETIME        NULL,
+  PRIMARY KEY (id),
+  KEY idx_ebgi_event (event_id),
+  CONSTRAINT fk_ebgi_event
+    FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Migration 012: Clients master (events.client_id added inline above; table created in migration 004)
 
 -- Migration 010: Re-enable foreign key checks
 USE justtap;

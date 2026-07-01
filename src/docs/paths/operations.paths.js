@@ -52,11 +52,58 @@ const managerPaths = {
   '/managers': {
     get: op('get', ['Managers'], 'List event managers', {
       operationId: 'managersList',
-      description: 'Returns active event managers (`staff` with role `event_manager`). Supports pagination and search by name.',
+      description: 'Returns active event managers (`staff` with role `event_manager`). Use `forSelect=true` for an unpaginated list sorted by name (multi-select dropdowns). Supports pagination and search by name.',
       parameters: paginationParams([
         { name: 'includeInactive', in: 'query', schema: { type: 'string', enum: ['true', 'false'] } },
+        { name: 'forSelect', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: 'Return all matching managers as `{ items }` without pagination' },
       ]),
       responseSchema: 'PaginatedList',
+    }),
+  },
+};
+
+const clientPaths = {
+  '/clients': {
+    get: op('get', ['Clients'], 'List clients', {
+      operationId: 'clientsList',
+      description: 'Returns clients for the event create client-name dropdown. Use `forSelect=true` for an unpaginated list sorted by name. Supports search by name, caterer, or contact number.',
+      parameters: paginationParams([
+        { name: 'forSelect', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: 'Return all matching clients as `{ items }` without pagination' },
+      ]),
+      responseSchema: 'PaginatedList',
+    }),
+    post: op('post', ['Clients'], 'Create client', {
+      operationId: 'clientsCreate',
+      requestBody: jsonBody('CreateClientRequest'),
+      successDescription: 'Client created',
+    }),
+  },
+  '/clients/{id}': {
+    get: op('get', ['Clients'], 'Get client by ID', {
+      operationId: 'clientsGetById',
+      parameters: [idParam()],
+      responseSchema: 'Client',
+    }),
+  },
+};
+
+const captainPaths = {
+  '/captains': {
+    get: op('get', ['Captains'], 'List captains', {
+      operationId: 'captainsList',
+      description: 'Returns active captains (`staff` with role `captain`). Use `forSelect=true` for an unpaginated list sorted by name (captain name dropdown on create event step 4).',
+      parameters: paginationParams([
+        { name: 'includeInactive', in: 'query', schema: { type: 'string', enum: ['true', 'false'] } },
+        { name: 'forSelect', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: 'Return all matching captains as `{ items }` without pagination' },
+      ]),
+      responseSchema: 'PaginatedList',
+    }),
+    post: op('post', ['Captains'], 'Add captain', {
+      operationId: 'captainsCreate',
+      description: 'Creates a new captain (`staff` with role `captain`) for the Just Tap Information captain dropdown.',
+      requestBody: jsonBody('CreateCaptainRequest'),
+      responseSchema: 'Staff',
+      successDescription: 'Captain created',
     }),
   },
 };
@@ -268,6 +315,8 @@ const miscPaths = {
 module.exports = {
   tasksPaths,
   managerPaths,
+  clientPaths,
+  captainPaths,
   staffPaths,
   feedbackPaths,
   ordersPaths,

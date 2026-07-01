@@ -265,9 +265,194 @@ const menuRepository = {
 
   async findPackages() {
     const [rows] = await pool.execute(
-      "SELECT id, name, slug, type FROM menu_packages WHERE deleted_at IS NULL ORDER BY id"
+      `SELECT id, uuid, name, slug, type, price, is_most_popular, sort_order, is_active
+       FROM menu_packages
+       WHERE deleted_at IS NULL AND is_active = 1
+       ORDER BY sort_order, id`
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      uuid: row.uuid,
+      name: row.name,
+      slug: row.slug,
+      type: row.type,
+      price: row.price != null ? Number(row.price) : null,
+      isMostPopular: Boolean(row.is_most_popular),
+    }));
+  },
+
+  formatFeature(row) {
+    return {
+      id: row.id,
+      uuid: row.uuid,
+      name: row.name,
+      isActive: Boolean(row.is_active),
+      sortOrder: row.sort_order,
+    };
+  },
+
+  formatPackageTier(row, includedFeatureIds = []) {
+    return {
+      id: row.id,
+      uuid: row.uuid,
+      name: row.name,
+      slug: row.slug,
+      type: row.type,
+      price: row.price != null ? Number(row.price) : null,
+      priceLabel: row.price != null ? `Rs. ${Number(row.price).toLocaleString('en-IN')} / Event` : null,
+      isMostPopular: Boolean(row.is_most_popular),
+      isActive: Boolean(row.is_active),
+      sortOrder: row.sort_order,
+      includedFeatureIds,
+    };
+  },
+
+  async findAllFeatures() {
+    const [rows] = await pool.execute(
+      `SELECT * FROM package_features WHERE deleted_at IS NULL ORDER BY sort_order, id`
     );
     return rows;
+  },
+
+  async findFeatureById(id) {
+    const [rows] = await pool.execute(
+      'SELECT * FROM package_features WHERE id = ? AND deleted_at IS NULL',
+      [id]
+    );
+    return rows[0] || null;
+  },
+
+  async createFeature(data) {
+    const [result] = await pool.execute(
+      `INSERT INTO package_features (name, is_active, sort_order) VALUES (?, ?, ?)`,
+      [data.name, data.is_active !== false ? 1 : 0, data.sort_order || 0]
+    );
+    return result.insertId;
+  },
+
+  async updateFeature(id, data) {
+    const fields = [];
+    const values = [];
+    for (const key of ['name', 'is_active', 'sort_order']) {
+      if (data[key] !== undefined) {
+        fields.push(`${key} = ?`);
+        values.push(key === 'is_active' ? (data[key] ? 1 : 0) : data[key]);
+      }
+    }
+    if (!fields.length) return;
+    values.push(id);
+    await pool.execute(
+      `UPDATE package_features SET ${fields.join(', ')}, updated_at = NOW() WHERE id = ? AND deleted_at IS NULL`,
+      values
+    );
+  },
+
+  async deleteFeature(id) {
+    await pool.execute('UPDATE package_features SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL', [id]);
+  },
+
+  async findPackageById(id) {
+    const [rows] = await pool.execute(
+      'SELECT * FROM menu_packages WHERE id = ? AND deleted_at IS NULL',
+      [id]
+    );
+    return rows[0] || null;
+  },
+
+  async findPackageFeatureIds(packageId) {
+    const [rows] = await pool.execute(
+      `SELECT feature_id FROM menu_package_features
+       WHERE package_id = ? AND deleted_at IS NULL`,
+      [packageId]
+    );
+    return rows.map((row) => row.feature_id);
+  },
+
+  async findAllPackageFeatureMap() {
+    const [rows] = await pool.execute(
+      `SELECT package_id, feature_id FROM menu_package_features WHERE deleted_at IS NULL`
+    );
+    const map = {};
+    for (const row of rows) {
+      if (!map[row.package_id]) map[row.package_id] = [];
+      map[row.package_id].push(row.feature_id);
+    }
+    return map;
+  },
+
+  async findManagePackages() {
+    const [packages] = await pool.execute(
+      `SELECT * FROM menu_packages WHERE deleted_at IS NULL ORDER BY sort_order, id`
+    );
+    const features = await this.findAllFeatures();
+    const featureMap = await this.findAllPackageFeatureMap();
+    return {
+      features: features.map((row) => this.formatFeature(row)),
+      packages: packages.map((row) => this.formatPackageTier(row, featureMap[row.id] || [])),
+    };
+  },
+
+  async createPackage(data) {
+    const [result] = await pool.execute(
+      `INSERT INTO menu_packages (name, slug, type, price, is_most_popular, sort_order, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        data.name,
+        data.slug,
+        data.type || 'custom',
+        data.price ?? null,
+        data.is_most_popular ? 1 : 0,
+        data.sort_order || 0,
+        data.is_active !== false ? 1 : 0,
+      ]
+    );
+    return result.insertId;
+  },
+
+  async updatePackage(id, data) {
+    const fields = [];
+    const values = [];
+    for (const key of ['name', 'slug', 'type', 'price', 'is_most_popular', 'sort_order', 'is_active']) {
+      if (data[key] !== undefined) {
+        fields.push(`${key} = ?`);
+        if (key === 'is_most_popular' || key === 'is_active') {
+          values.push(data[key] ? 1 : 0);
+        } else {
+          values.push(data[key]);
+        }
+      }
+    }
+    if (!fields.length) return;
+    values.push(id);
+    await pool.execute(
+      `UPDATE menu_packages SET ${fields.join(', ')}, updated_at = NOW() WHERE id = ? AND deleted_at IS NULL`,
+      values
+    );
+  },
+
+  async deletePackage(id) {
+    await pool.execute('UPDATE menu_packages SET deleted_at = NOW(), is_active = 0 WHERE id = ? AND deleted_at IS NULL', [id]);
+  },
+
+  async setPackageFeatures(packageId, featureIds) {
+    await pool.execute(
+      'UPDATE menu_package_features SET deleted_at = NOW() WHERE package_id = ? AND deleted_at IS NULL',
+      [packageId]
+    );
+    for (const featureId of featureIds || []) {
+      await pool.execute(
+        `INSERT INTO menu_package_features (package_id, feature_id) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE deleted_at = NULL, updated_at = NOW()`,
+        [packageId, featureId]
+      );
+    }
+  },
+
+  async clearMostPopularExcept(packageId) {
+    await pool.execute(
+      'UPDATE menu_packages SET is_most_popular = 0, updated_at = NOW() WHERE id != ? AND deleted_at IS NULL',
+      [packageId]
+    );
   },
 
   async findCourses() {

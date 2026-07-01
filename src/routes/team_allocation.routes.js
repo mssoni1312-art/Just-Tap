@@ -1,0 +1,32 @@
+const express = require('express');
+const asyncHandler = require('../utils/asyncHandler');
+const authenticate = require('../middleware/auth.middleware');
+const requireSuperAdmin = require('../middleware/role.middleware');
+const teamAllocationService = require('../services/team_allocation.service');
+
+const router = express.Router();
+
+router.get(
+  '/:teamType',
+  authenticate,
+  requireSuperAdmin,
+  asyncHandler(async (req, res) => {
+    const { sendSuccess } = require('../helpers/response');
+    sendSuccess(res, await teamAllocationService.getAllocation(req.params.teamType));
+  })
+);
+
+router.get(
+  '/:teamType/staff/:staffId/report',
+  authenticate,
+  requireSuperAdmin,
+  asyncHandler(async (req, res) => {
+    const { sendSuccess } = require('../helpers/response');
+    sendSuccess(
+      res,
+      await teamAllocationService.getStaffReport(req.params.teamType, req.params.staffId)
+    );
+  })
+);
+
+module.exports = router;

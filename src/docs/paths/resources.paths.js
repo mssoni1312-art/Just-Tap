@@ -209,6 +209,58 @@ const menuPaths = {
   },
   '/menu/packages': {
     get: op('get', ['Menu'], 'List menu packages', { operationId: 'menuPackagesList' }),
+    post: op('post', ['Menu'], 'Create package tier', {
+      operationId: 'menuPackagesCreate',
+      requestBody: jsonBody('CreateManagePackageRequest'),
+      successDescription: 'Package created',
+    }),
+  },
+  '/menu/packages/{id}': {
+    get: op('get', ['Menu'], 'Get package tier by ID', {
+      operationId: 'menuPackagesGetById',
+      parameters: [idParam()],
+      responseSchema: 'ManagePackageTier',
+    }),
+    patch: op('patch', ['Menu'], 'Update package tier', {
+      operationId: 'menuPackagesUpdate',
+      parameters: [idParam()],
+      requestBody: jsonBody('CreateManagePackageRequest'),
+    }),
+    delete: op('delete', ['Menu'], 'Delete package tier', {
+      operationId: 'menuPackagesDelete',
+      parameters: [idParam()],
+    }),
+  },
+  '/menu/package-features': {
+    get: op('get', ['Menu'], 'Manage Packages dashboard data', {
+      operationId: 'menuPackageFeaturesList',
+      description: 'Returns global features and package tiers with included feature IDs for the Manage Packages screen.',
+      responseSchema: 'ManagePackagesResponse',
+    }),
+    post: op('post', ['Menu'], 'Create global package feature', {
+      operationId: 'menuPackageFeaturesCreate',
+      requestBody: jsonBody('CreatePackageFeatureRequest'),
+      successDescription: 'Feature created',
+    }),
+  },
+  '/menu/package-features/{id}': {
+    patch: op('patch', ['Menu'], 'Update global package feature', {
+      operationId: 'menuPackageFeaturesUpdate',
+      parameters: [idParam()],
+      requestBody: jsonBody('CreatePackageFeatureRequest'),
+    }),
+    delete: op('delete', ['Menu'], 'Delete global package feature', {
+      operationId: 'menuPackageFeaturesDelete',
+      parameters: [idParam()],
+    }),
+  },
+  '/menu/package-settings': {
+    patch: op('patch', ['Menu'], 'Save Manage Packages system changes', {
+      operationId: 'menuPackageSettingsSave',
+      description: 'Bulk update feature toggles and package tiers (Save System Changes button).',
+      requestBody: jsonBody('SavePackageSettingsRequest'),
+      responseSchema: 'ManagePackagesResponse',
+    }),
   },
   '/menu/courses': {
     get: op('get', ['Menu'], 'List menu courses', { operationId: 'menuCoursesList' }),

@@ -4,6 +4,15 @@ const { resolveId, resolveIds } = require('../helpers/idResolver');
 const { sendExport } = require('../helpers/exportImport');
 const AppError = require('../utils/AppError');
 
+const toPackageSlug = (name) => {
+  const slug = String(name || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  return slug || 'package';
+};
+
 const CATEGORY_EXPORT_COLUMNS = [
   { label: 'ID', key: 'id' },
   { label: 'UUID', key: 'uuid' },
@@ -185,6 +194,131 @@ const menuService = {
 
   listPackages: () => menuRepository.findPackages(),
   listCourses: () => menuRepository.findCourses(),
+
+  getManagePackages: () => menuRepository.findManagePackages(),
+
+  async getPackage(idOrUuid) {
+    const id = await resolveId('menu_packages', idOrUuid);
+    const row = await menuRepository.findPackageById(id);
+    if (!row) throw new AppError('Package not found', 404);
+    const includedFeatureIds = await menuRepository.findPackageFeatureIds(id);
+    return menuRepository.formatPackageTier(row, includedFeatureIds);
+  },
+
+  async createPackageFeature(data) {
+    const id = await menuRepository.createFeature({
+      name: data.name,
+      is_active: data.isActive,
+      sort_order: data.sortOrder,
+    });
+    const row = await menuRepository.findFeatureById(id);
+    return menuRepository.formatFeature(row);
+  },
+
+  async updatePackageFeature(idOrUuid, data) {
+    const id = await resolveId('package_features', idOrUuid);
+    const row = await menuRepository.findFeatureById(id);
+    if (!row) throw new AppError('Feature not found', 404);
+    await menuRepository.updateFeature(id, {
+      name: data.name,
+      is_active: data.isActive,
+      sort_order: data.sortOrder,
+    });
+    return menuRepository.formatFeature(await menuRepository.findFeatureById(id));
+  },
+
+  async deletePackageFeature(idOrUuid) {
+    const id = await resolveId('package_features', idOrUuid);
+    await menuRepository.deleteFeature(id);
+    return { deleted: true };
+  },
+
+  async createPackage(data) {
+    const slug = toPackageSlug(data.name);
+    const id = await menuRepository.createPackage({
+      name: data.name,
+      slug,
+      type: data.type,
+      price: data.price,
+      is_most_popular: data.isMostPopular,
+      sort_order: data.sortOrder,
+    });
+    if (data.isMostPopular) {
+      await menuRepository.clearMostPopularExcept(id);
+    }
+    if (data.includedFeatureIds?.length) {
+      const featureIds = await resolveIds('package_features', data.includedFeatureIds);
+      await menuRepository.setPackageFeatures(id, featureIds);
+    }
+    return this.getPackage(id);
+  },
+
+  async updatePackage(idOrUuid, data) {
+    const id = await resolveId('menu_packages', idOrUuid);
+    const row = await menuRepository.findPackageById(id);
+    if (!row) throw new AppError('Package not found', 404);
+
+    const updateData = {};
+    if (data.name !== undefined) {
+      updateData.name = data.name;
+      updateData.slug = toPackageSlug(data.name);
+    }
+    if (data.price !== undefined) updateData.price = data.price;
+    if (data.type !== undefined) updateData.type = data.type;
+    if (data.isMostPopular !== undefined) updateData.is_most_popular = data.isMostPopular;
+    if (data.sortOrder !== undefined) updateData.sort_order = data.sortOrder;
+    if (data.isActive !== undefined) updateData.is_active = data.isActive;
+
+    await menuRepository.updatePackage(id, updateData);
+    if (data.isMostPopular) {
+      await menuRepository.clearMostPopularExcept(id);
+    }
+    if (data.includedFeatureIds !== undefined) {
+      const featureIds = data.includedFeatureIds.length
+        ? await resolveIds('package_features', data.includedFeatureIds)
+        : [];
+      await menuRepository.setPackageFeatures(id, featureIds);
+    }
+    return this.getPackage(id);
+  },
+
+  async deletePackage(idOrUuid) {
+    const id = await resolveId('menu_packages', idOrUuid);
+    await menuRepository.deletePackage(id);
+    return { deleted: true };
+  },
+
+  async savePackageSettings(data) {
+    if (data.features?.length) {
+      for (const feature of data.features) {
+        await menuRepository.updateFeature(feature.id, {
+          name: feature.name,
+          is_active: feature.isActive,
+          sort_order: feature.sortOrder,
+        });
+      }
+    }
+    if (data.packages?.length) {
+      for (const pkg of data.packages) {
+        const updateData = {};
+        if (pkg.name !== undefined) {
+          updateData.name = pkg.name;
+          updateData.slug = toPackageSlug(pkg.name);
+        }
+        if (pkg.price !== undefined) updateData.price = pkg.price;
+        if (pkg.isMostPopular !== undefined) updateData.is_most_popular = pkg.isMostPopular;
+        if (pkg.sortOrder !== undefined) updateData.sort_order = pkg.sortOrder;
+        await menuRepository.updatePackage(pkg.id, updateData);
+        if (pkg.isMostPopular) {
+          await menuRepository.clearMostPopularExcept(pkg.id);
+        }
+        if (pkg.includedFeatureIds !== undefined) {
+          await menuRepository.setPackageFeatures(pkg.id, pkg.includedFeatureIds);
+        }
+      }
+    }
+    return menuRepository.findManagePackages();
+  },
 
   async getPlanning(eventIdOrUuid, category) {
     const eventId = await resolveId('events', eventIdOrUuid);

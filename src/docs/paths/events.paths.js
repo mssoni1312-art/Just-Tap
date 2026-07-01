@@ -79,6 +79,7 @@ const eventsPaths = {
     get: op('get', ['Events'], 'Get event by ID', {
       operationId: 'eventsGetById',
       parameters: [idParam()],
+      responseSchema: 'EventDetail',
     }),
     patch: op('patch', ['Events'], 'Update event', {
       operationId: 'eventsUpdate',

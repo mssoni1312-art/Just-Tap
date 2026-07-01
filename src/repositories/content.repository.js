@@ -118,24 +118,46 @@ const analyticsRepository = {
   },
 
   async getSalesChart() {
-    const quarters = ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6', 'Q7'];
     const [rows] = await pool.execute(
-      `SELECT QUARTER(created_at) AS q, COUNT(*) AS value
-       FROM order_line_items
-       WHERE deleted_at IS NULL AND created_at >= DATE_SUB(NOW(), INTERVAL 1 YEAR)
-       GROUP BY QUARTER(created_at)
-       ORDER BY q`
+      `SELECT
+         mi.name AS name,
+         COALESCE(SUM(
+           CASE
+             WHEN oli.deleted_at IS NULL
+               AND oli.status = 'delivered'
+               AND oli.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+             THEN oli.quantity
+             ELSE 0
+           END
+         ), 0) AS value
+       FROM menu_items mi
+       LEFT JOIN order_line_items oli ON oli.menu_item_id = mi.id
+       WHERE mi.deleted_at IS NULL AND mi.is_active = 1
+       GROUP BY mi.id, mi.name
+       ORDER BY value DESC, mi.name ASC
+       LIMIT 7`
     );
-    const dataMap = Object.fromEntries(rows.map((r) => [`Q${r.q}`, r.value]));
-    const chartData = quarters.map((label) => ({
-      label,
-      value: dataMap[label] || 0,
+
+    const chartData = rows.map((row) => ({
+      label: row.name,
+      name: row.name,
+      value: Number(row.value) || 0,
     }));
-    const sorted = [...chartData].sort((a, b) => b.value - a.value);
+
+    const withPositive = chartData.filter((point) => point.value > 0);
+    const highestServed = withPositive.length
+      ? [...withPositive].sort((a, b) => b.value - a.value)[0]
+      : null;
+
+    let lowestServed = null;
+    if (withPositive.length > 1) {
+      lowestServed = [...withPositive].sort((a, b) => a.value - b.value)[0];
+    }
+
     return {
       chartData,
-      highestServed: sorted[0],
-      lowestServed: sorted[sorted.length - 1],
+      highestServed,
+      lowestServed,
     };
   },
 };

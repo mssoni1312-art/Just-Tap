@@ -50,6 +50,30 @@ const listStaffSchema = paginationQuery.keys({
 
 const listManagersSchema = paginationQuery.keys({
   includeInactive: Joi.string().valid('true', 'false'),
+  forSelect: Joi.string().valid('true', 'false'),
+});
+
+const listClientsSchema = paginationQuery.keys({
+  forSelect: Joi.string().valid('true', 'false'),
+});
+
+const listCaptainsSchema = paginationQuery.keys({
+  includeInactive: Joi.string().valid('true', 'false'),
+  forSelect: Joi.string().valid('true', 'false'),
+});
+
+const createCaptainSchema = Joi.object({
+  name: Joi.string().required(),
+  isActive: Joi.boolean().default(true),
+});
+
+const createClientSchema = Joi.object({
+  name: Joi.string().required(),
+  catererName: Joi.string().required(),
+  cityName: Joi.string().required(),
+  contactNo: Joi.string().required(),
+  reference: Joi.string().required(),
+  isHighPriority: Joi.boolean().default(false),
 });
 
 const bulkUpdateStaffSchema = bulkIdsSchema.keys({
@@ -156,6 +180,54 @@ const reportQuerySchema = Joi.object({
   format: Joi.string().valid('json', 'csv'),
 });
 
+const createPackageFeatureSchema = Joi.object({
+  name: Joi.string().required(),
+  isActive: Joi.boolean().default(true),
+  sortOrder: Joi.number().integer().min(0),
+});
+
+const updatePackageFeatureSchema = Joi.object({
+  name: Joi.string(),
+  isActive: Joi.boolean(),
+  sortOrder: Joi.number().integer().min(0),
+});
+
+const createManagePackageSchema = Joi.object({
+  name: Joi.string().required(),
+  price: Joi.number().min(0).allow(null),
+  type: Joi.string().valid('premium', 'silver', 'gold', 'custom').default('custom'),
+  isMostPopular: Joi.boolean().default(false),
+  sortOrder: Joi.number().integer().min(0),
+  includedFeatureIds: Joi.array().items(Joi.number().integer()),
+});
+
+const updateManagePackageSchema = Joi.object({
+  name: Joi.string(),
+  price: Joi.number().min(0).allow(null),
+  type: Joi.string().valid('premium', 'silver', 'gold', 'custom'),
+  isMostPopular: Joi.boolean(),
+  sortOrder: Joi.number().integer().min(0),
+  isActive: Joi.boolean(),
+  includedFeatureIds: Joi.array().items(Joi.number().integer()),
+});
+
+const savePackageSettingsSchema = Joi.object({
+  features: Joi.array().items(Joi.object({
+    id: Joi.number().integer().required(),
+    isActive: Joi.boolean().required(),
+    name: Joi.string(),
+    sortOrder: Joi.number().integer().min(0),
+  })),
+  packages: Joi.array().items(Joi.object({
+    id: Joi.number().integer().required(),
+    name: Joi.string(),
+    price: Joi.number().min(0).allow(null),
+    isMostPopular: Joi.boolean(),
+    sortOrder: Joi.number().integer().min(0),
+    includedFeatureIds: Joi.array().items(Joi.number().integer()),
+  })),
+}).or('features', 'packages');
+
 module.exports = {
   listInquiriesSchema,
   createInquirySchema,
@@ -165,6 +237,10 @@ module.exports = {
   updateStaffSchema,
   listStaffSchema,
   listManagersSchema,
+  listClientsSchema,
+  listCaptainsSchema,
+  createCaptainSchema,
+  createClientSchema,
   bulkUpdateStaffSchema,
   createCategorySchema,
   updateCategorySchema,
@@ -187,4 +263,9 @@ module.exports = {
   listFeedbackSchema,
   orderTableQuerySchema,
   reportQuerySchema,
+  createPackageFeatureSchema,
+  updatePackageFeatureSchema,
+  createManagePackageSchema,
+  updateManagePackageSchema,
+  savePackageSettingsSchema,
 };

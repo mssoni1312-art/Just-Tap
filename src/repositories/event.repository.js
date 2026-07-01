@@ -12,8 +12,12 @@ const toDateOnly = (value) => {
 const formatEvent = (row) => ({
   id: String(row.id),
   uuid: row.uuid,
+  clientId: row.client_id || null,
   clientName: row.client_name,
   clientMobile: row.client_mobile,
+  catererName: row.caterer_name || null,
+  reference: row.reference || null,
+  isHighPriority: Boolean(row.is_high_priority),
   venue: row.venue_name,
   venueName: row.venue_name,
   cityName: row.city_name,
@@ -28,8 +32,71 @@ const formatEvent = (row) => ({
   packageName: row.package_name || null,
   assignedManagerId: row.assigned_manager_id,
   managerName: row.manager_name || null,
+  justTapInformation: {
+    noOfTablets: row.no_of_tablets ?? null,
+    noOfCaptains: row.no_of_captains ?? null,
+    noOfManagers: row.no_of_managers ?? null,
+    rate: row.just_tap_rate != null ? Number(row.just_tap_rate) : null,
+  },
+  photographyVideography: {
+    enabled: Boolean(row.has_photography_videography),
+    name: row.photography_name || null,
+    number: row.photography_number || null,
+    city: row.photography_city || null,
+    description: row.photography_description || null,
+    rate: row.photography_rate != null ? Number(row.photography_rate) : null,
+  },
+  justSocialInformation: {
+    clientInstagramId: row.client_instagram_id || null,
+    noOfFollowers: row.no_of_followers ?? null,
+    noOfFoodReels: row.no_of_food_reels ?? null,
+    noOfTestimonialReels: row.no_of_testimonial_reels ?? null,
+  },
+  brideGroomInformation: {
+    brideName: row.bride_name || null,
+    brideInstagramId: row.bride_instagram_id || null,
+    groomName: row.groom_name || null,
+    groomInstagramId: row.groom_instagram_id || null,
+  },
+  pricing: {
+    totalRate: row.total_rate != null ? Number(row.total_rate) : null,
+    discountRate: row.discount_rate != null ? Number(row.discount_rate) : null,
+    finalRate: row.final_rate != null ? Number(row.final_rate) : null,
+  },
   createdAt: row.created_at,
 });
+
+const mapTabFourFields = (data) => {
+  const justTap = data.justTapInformation || {};
+  const photo = data.photographyVideography || {};
+  const social = data.justSocialInformation || {};
+  const brideGroom = data.brideGroomInformation || {};
+  const pricing = data.pricing || {};
+
+  return {
+    no_of_tablets: justTap.noOfTablets,
+    no_of_captains: justTap.noOfCaptains,
+    no_of_managers: justTap.noOfManagers,
+    just_tap_rate: justTap.rate,
+    has_photography_videography: photo.enabled,
+    photography_name: photo.name,
+    photography_number: photo.number,
+    photography_city: photo.city,
+    photography_description: photo.description,
+    photography_rate: photo.rate,
+    client_instagram_id: social.clientInstagramId,
+    no_of_followers: social.noOfFollowers,
+    no_of_food_reels: social.noOfFoodReels,
+    no_of_testimonial_reels: social.noOfTestimonialReels,
+    bride_name: brideGroom.brideName,
+    bride_instagram_id: brideGroom.brideInstagramId,
+    groom_name: brideGroom.groomName,
+    groom_instagram_id: brideGroom.groomInstagramId,
+    total_rate: pricing.totalRate,
+    discount_rate: pricing.discountRate,
+    final_rate: pricing.finalRate,
+  };
+};
 
 const eventRepository = {
   formatEvent,
@@ -160,16 +227,26 @@ const eventRepository = {
   },
 
   async create(data, userId) {
+    const tabFour = mapTabFourFields(data);
     const [result] = await pool.execute(
       `INSERT INTO events (
-        inquiry_id, client_name, client_mobile, venue_name, city_name, inquiry_date,
+        inquiry_id, client_id, client_name, client_mobile, caterer_name, reference, is_high_priority,
+        venue_name, city_name, inquiry_date,
         start_date, end_date, event_function_name, status, package_id, assigned_manager_id,
-        is_live, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        is_live, no_of_tablets, no_of_captains, no_of_managers, just_tap_rate,
+        has_photography_videography, photography_name, photography_number, photography_city,
+        photography_description, photography_rate, client_instagram_id, no_of_followers,
+        no_of_food_reels, no_of_testimonial_reels, bride_name, bride_instagram_id,
+        groom_name, groom_instagram_id, total_rate, discount_rate, final_rate, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.inquiry_id || null,
+        data.client_id || null,
         data.client_name,
         data.client_mobile || null,
+        data.caterer_name || null,
+        data.reference || null,
+        data.is_high_priority ? 1 : 0,
         data.venue_name,
         data.city_name,
         data.inquiry_date || null,
@@ -180,6 +257,27 @@ const eventRepository = {
         data.package_id || null,
         data.assigned_manager_id || null,
         data.is_live ? 1 : 0,
+        tabFour.no_of_tablets ?? null,
+        tabFour.no_of_captains ?? null,
+        tabFour.no_of_managers ?? null,
+        tabFour.just_tap_rate ?? null,
+        tabFour.has_photography_videography ? 1 : 0,
+        tabFour.photography_name || null,
+        tabFour.photography_number || null,
+        tabFour.photography_city || null,
+        tabFour.photography_description || null,
+        tabFour.photography_rate ?? null,
+        tabFour.client_instagram_id || null,
+        tabFour.no_of_followers ?? null,
+        tabFour.no_of_food_reels ?? null,
+        tabFour.no_of_testimonial_reels ?? null,
+        tabFour.bride_name || null,
+        tabFour.bride_instagram_id || null,
+        tabFour.groom_name || null,
+        tabFour.groom_instagram_id || null,
+        tabFour.total_rate ?? null,
+        tabFour.discount_rate ?? null,
+        tabFour.final_rate ?? null,
         userId,
       ]
     );
@@ -190,14 +288,28 @@ const eventRepository = {
     const fields = [];
     const values = [];
     const allowed = [
-      'client_name', 'client_mobile', 'venue_name', 'city_name', 'inquiry_date',
+      'client_id', 'client_name', 'client_mobile', 'caterer_name', 'reference', 'is_high_priority',
+      'venue_name', 'city_name', 'inquiry_date',
       'start_date', 'end_date', 'event_function_name', 'status', 'package_id',
       'assigned_manager_id', 'is_live', 'inquiry_id',
+      'no_of_tablets', 'no_of_captains', 'no_of_managers', 'just_tap_rate',
+      'has_photography_videography', 'photography_name', 'photography_number', 'photography_city',
+      'photography_description', 'photography_rate', 'client_instagram_id', 'no_of_followers',
+      'no_of_food_reels', 'no_of_testimonial_reels', 'bride_name', 'bride_instagram_id',
+      'groom_name', 'groom_instagram_id', 'total_rate', 'discount_rate', 'final_rate',
     ];
+    const booleanFields = new Set(['is_live', 'is_high_priority', 'has_photography_videography']);
+    const tabFour = mapTabFourFields(data);
+    const merged = { ...data, ...tabFour };
+
     for (const key of allowed) {
-      if (data[key] !== undefined) {
+      if (merged[key] !== undefined) {
         fields.push(`${key} = ?`);
-        values.push(key === 'is_live' ? (data[key] ? 1 : 0) : data[key]);
+        if (booleanFields.has(key)) {
+          values.push(merged[key] ? 1 : 0);
+        } else {
+          values.push(merged[key]);
+        }
       }
     }
     if (!fields.length) return;
@@ -317,6 +429,91 @@ const eventRepository = {
         `INSERT INTO event_menu_selections (event_id, menu_item_id) VALUES (?, ?)
          ON DUPLICATE KEY UPDATE deleted_at = NULL, updated_at = NOW()`,
         [eventId, itemId]
+      );
+    }
+  },
+
+  async getManagerAllocations(eventId) {
+    const [rows] = await pool.execute(
+      `SELECT s.id, s.name
+       FROM event_manager_allocations ema
+       JOIN staff s ON s.id = ema.staff_id
+       WHERE ema.event_id = ?
+         AND ema.deleted_at IS NULL
+         AND s.deleted_at IS NULL
+       ORDER BY ema.id`,
+      [eventId]
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+    }));
+  },
+
+  async setManagerAllocations(eventId, staffIds) {
+    await pool.execute(
+      'UPDATE event_manager_allocations SET deleted_at = NOW() WHERE event_id = ? AND deleted_at IS NULL',
+      [eventId]
+    );
+    for (const staffId of staffIds) {
+      await pool.execute(
+        `INSERT INTO event_manager_allocations (event_id, staff_id) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE deleted_at = NULL, updated_at = NOW()`,
+        [eventId, staffId]
+      );
+    }
+  },
+
+  async getCaptainAllocations(eventId) {
+    const [rows] = await pool.execute(
+      `SELECT s.id, s.name
+       FROM event_captain_allocations eca
+       JOIN staff s ON s.id = eca.staff_id
+       WHERE eca.event_id = ?
+         AND eca.deleted_at IS NULL
+         AND s.deleted_at IS NULL
+       ORDER BY eca.id`,
+      [eventId]
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+    }));
+  },
+
+  async setCaptainAllocations(eventId, staffIds) {
+    await pool.execute(
+      'UPDATE event_captain_allocations SET deleted_at = NOW() WHERE event_id = ? AND deleted_at IS NULL',
+      [eventId]
+    );
+    for (const staffId of staffIds) {
+      await pool.execute(
+        `INSERT INTO event_captain_allocations (event_id, staff_id) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE deleted_at = NULL, updated_at = NOW()`,
+        [eventId, staffId]
+      );
+    }
+  },
+
+  async getBrideGroomImages(eventId) {
+    const [rows] = await pool.execute(
+      `SELECT image_url FROM event_bride_groom_images
+       WHERE event_id = ? AND deleted_at IS NULL
+       ORDER BY sort_order, id`,
+      [eventId]
+    );
+    return rows.map((row) => row.image_url);
+  },
+
+  async setBrideGroomImages(eventId, imageUrls) {
+    await pool.execute(
+      'UPDATE event_bride_groom_images SET deleted_at = NOW() WHERE event_id = ? AND deleted_at IS NULL',
+      [eventId]
+    );
+    for (const [i, imageUrl] of (imageUrls || []).entries()) {
+      await pool.execute(
+        'INSERT INTO event_bride_groom_images (event_id, image_url, sort_order) VALUES (?, ?, ?)',
+        [eventId, imageUrl, i]
       );
     }
   },

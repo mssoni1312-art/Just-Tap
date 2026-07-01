@@ -15,6 +15,11 @@ const {
   bulkUpdateCategoriesSchema,
   bulkUpdateItemsSchema,
   exportQuerySchema,
+  createPackageFeatureSchema,
+  updatePackageFeatureSchema,
+  createManagePackageSchema,
+  updateManagePackageSchema,
+  savePackageSettingsSchema,
 } = require('../validations/domain.validation');
 const { idParamSchema } = require('../validations/event.validation');
 
@@ -42,6 +47,15 @@ router.patch('/items/:id', validate(idParamSchema, 'params'), validate(updateIte
 router.delete('/items/:id', validate(idParamSchema, 'params'), asyncHandler(menuController.deleteItem));
 
 router.get('/packages', asyncHandler(menuController.listPackages));
+router.post('/packages', validate(createManagePackageSchema), asyncHandler(menuController.createPackage));
+router.patch('/package-settings', validate(savePackageSettingsSchema), asyncHandler(menuController.savePackageSettings));
+router.get('/package-features', asyncHandler(menuController.getManagePackages));
+router.post('/package-features', validate(createPackageFeatureSchema), asyncHandler(menuController.createPackageFeature));
+router.patch('/package-features/:id', validate(idParamSchema, 'params'), validate(updatePackageFeatureSchema), asyncHandler(menuController.updatePackageFeature));
+router.delete('/package-features/:id', validate(idParamSchema, 'params'), asyncHandler(menuController.deletePackageFeature));
+router.get('/packages/:id', validate(idParamSchema, 'params'), asyncHandler(menuController.getPackage));
+router.patch('/packages/:id', validate(idParamSchema, 'params'), validate(updateManagePackageSchema), asyncHandler(menuController.updatePackage));
+router.delete('/packages/:id', validate(idParamSchema, 'params'), asyncHandler(menuController.deletePackage));
 router.get('/courses', asyncHandler(menuController.listCourses));
 
 module.exports = router;
