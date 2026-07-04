@@ -8,6 +8,7 @@ const path = require('path');
 const dirs = [
   'uploads/images',
   'uploads/documents',
+  'uploads/reports',
   'logs',
 ];
 

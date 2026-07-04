@@ -16,6 +16,7 @@ const analyticsRoutes = require('./analytics.routes');
 const contentRoutes = require('./content.routes');
 const uploadsRoutes = require('./uploads.routes');
 const activityRoutes = require('./activity.routes');
+const reportRoutes = require('./report.routes');
 
 const router = express.Router();
 
@@ -37,5 +38,6 @@ router.use('/team-allocations', require('./team_allocation.routes'));
 router.use('/content', contentRoutes);
 router.use('/uploads', uploadsRoutes);
 router.use('/activity', activityRoutes);
+router.use('/report', reportRoutes);
 
 module.exports = router;

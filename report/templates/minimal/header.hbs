@@ -1,0 +1,13 @@
+<header class="page-header">
+  <div class="header-inner">
+    {{#if images.logo}}
+      <img class="client-logo" src="{{images.logo}}" alt="Client Logo" />
+    {{/if}}
+    <div class="header-meta">
+      <p class="header-label">Curated Menu Report</p>
+      <h1 class="header-title">{{coupleName}}</h1>
+      {{#if eventDate}}<p class="header-date">{{eventDate}}{{#if venueName}} · {{venueName}}{{/if}}</p>{{/if}}
+    </div>
+  </div>
+  <hr class="gold-line" />
+</header>

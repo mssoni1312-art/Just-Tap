@@ -13,6 +13,15 @@ const toPackageSlug = (name) => {
   return slug || 'package';
 };
 
+const normalizePlanningName = (data) => {
+  const normalized = { ...data };
+  if (!normalized.name && normalized.name_english) {
+    normalized.name = normalized.name_english;
+  }
+  delete normalized.name_english;
+  return normalized;
+};
+
 const CATEGORY_EXPORT_COLUMNS = [
   { label: 'ID', key: 'id' },
   { label: 'UUID', key: 'uuid' },
@@ -37,8 +46,19 @@ const formatCategory = (row) => ({
   uuid: row.uuid,
   name: row.name,
   description: row.description,
+  slogan: row.slogan,
+  imageUrl: row.image_url,
   sortOrder: row.sort_order,
   itemCount: row.item_count,
+});
+
+const formatSubCategory = (row) => ({
+  id: String(row.id),
+  uuid: row.uuid,
+  name: row.name,
+  categoryId: row.category_id,
+  category: row.category_name,
+  sortOrder: row.sort_order,
 });
 
 const formatItem = (row) => ({
@@ -47,12 +67,15 @@ const formatItem = (row) => ({
   name: row.name,
   category: row.category_name,
   categoryId: row.category_id,
+  subcategory: row.subcategory_name,
+  subcategoryId: row.subcategory_id,
   price: String(row.price),
   isVeg: Boolean(row.is_veg),
   imageUrl: row.image_url,
   isBestSeller: Boolean(row.is_best_seller),
   isActive: Boolean(row.is_active),
   description: row.description,
+  slogan: row.slogan,
 });
 
 const menuService = {
@@ -66,7 +89,9 @@ const menuService = {
   },
 
   async createCategory(data) {
-    const id = await menuRepository.createCategory(data);
+    const payload = normalizePlanningName(data);
+    if (!payload.name) throw new AppError('Name is required', 422);
+    const id = await menuRepository.createCategory(payload);
     return this.getCategory(id);
   },
 
@@ -74,7 +99,7 @@ const menuService = {
     const id = await resolveId('menu_categories', idOrUuid);
     const row = await menuRepository.findCategoryById(id);
     if (!row) throw new AppError('Category not found', 404);
-    await menuRepository.updateCategory(id, data);
+    await menuRepository.updateCategory(id, normalizePlanningName(data));
     return this.getCategory(id);
   },
 
@@ -109,14 +134,62 @@ const menuService = {
   async importCategories(records) {
     const created = [];
     for (const record of records) {
+      const payload = normalizePlanningName(record);
       const id = await menuRepository.createCategory({
-        name: record.name,
-        description: record.description,
-        sort_order: record.sortOrder || record.sort_order || 0,
+        name: payload.name,
+        description: payload.description,
+        slogan: payload.slogan,
+        image_url: payload.imageUrl || payload.image_url,
+        sort_order: payload.sortOrder || payload.sort_order || 0,
       });
       created.push(id);
     }
     return { imported: created.length, ids: created };
+  },
+
+  listSubCategories: async (query) => {
+    const resolvedQuery = { ...query };
+    if (query.categoryId) {
+      resolvedQuery.categoryId = await resolveId('menu_categories', query.categoryId);
+    }
+    return menuRepository.findSubCategories(resolvedQuery);
+  },
+
+  async getSubCategory(idOrUuid) {
+    const id = await resolveId('menu_subcategories', idOrUuid);
+    const row = await menuRepository.findSubCategoryById(id);
+    if (!row) throw new AppError('Subcategory not found', 404);
+    return formatSubCategory(row);
+  },
+
+  async createSubCategory(data) {
+    const payload = normalizePlanningName(data);
+    if (!payload.name) throw new AppError('Name is required', 422);
+    payload.category_id = await resolveId('menu_categories', payload.category_id);
+    const category = await menuRepository.findCategoryById(payload.category_id);
+    if (!category) throw new AppError('Category not found', 404);
+    const id = await menuRepository.createSubCategory(payload);
+    return this.getSubCategory(id);
+  },
+
+  async updateSubCategory(idOrUuid, data) {
+    const id = await resolveId('menu_subcategories', idOrUuid);
+    const row = await menuRepository.findSubCategoryById(id);
+    if (!row) throw new AppError('Subcategory not found', 404);
+    const payload = normalizePlanningName(data);
+    if (payload.category_id !== undefined) {
+      payload.category_id = await resolveId('menu_categories', payload.category_id);
+      const category = await menuRepository.findCategoryById(payload.category_id);
+      if (!category) throw new AppError('Category not found', 404);
+    }
+    await menuRepository.updateSubCategory(id, payload);
+    return this.getSubCategory(id);
+  },
+
+  async deleteSubCategory(idOrUuid) {
+    const id = await resolveId('menu_subcategories', idOrUuid);
+    await menuRepository.deleteSubCategory(id);
+    return { deleted: true };
   },
 
   listItems: (q) => menuRepository.findItems(q),
@@ -129,7 +202,18 @@ const menuService = {
   },
 
   async createItem(data) {
-    const id = await menuRepository.createItem(data);
+    const payload = normalizePlanningName(data);
+    if (!payload.name) throw new AppError('Name is required', 422);
+    if (payload.subcategory_id) {
+      const subcategoryId = await resolveId('menu_subcategories', payload.subcategory_id);
+      const subcategory = await menuRepository.findSubCategoryById(subcategoryId);
+      if (!subcategory) throw new AppError('Subcategory not found', 404);
+      if (Number(subcategory.category_id) !== Number(payload.category_id)) {
+        throw new AppError('Subcategory does not belong to the selected category', 422);
+      }
+      payload.subcategory_id = subcategoryId;
+    }
+    const id = await menuRepository.createItem(payload);
     return this.getItem(id);
   },
 
@@ -137,7 +221,18 @@ const menuService = {
     const id = await resolveId('menu_items', idOrUuid);
     const row = await menuRepository.findItemById(id);
     if (!row) throw new AppError('Menu item not found', 404);
-    await menuRepository.updateItem(id, data);
+    const payload = normalizePlanningName(data);
+    const categoryId = payload.category_id ?? row.category_id;
+    if (payload.subcategory_id !== undefined && payload.subcategory_id !== null) {
+      const subcategoryId = await resolveId('menu_subcategories', payload.subcategory_id);
+      const subcategory = await menuRepository.findSubCategoryById(subcategoryId);
+      if (!subcategory) throw new AppError('Subcategory not found', 404);
+      if (Number(subcategory.category_id) !== Number(categoryId)) {
+        throw new AppError('Subcategory does not belong to the selected category', 422);
+      }
+      payload.subcategory_id = subcategoryId;
+    }
+    await menuRepository.updateItem(id, payload);
     return this.getItem(id);
   },
 
@@ -177,15 +272,18 @@ const menuService = {
   async importItems(records) {
     const created = [];
     for (const record of records) {
+      const payload = normalizePlanningName(record);
       const id = await menuRepository.createItem({
-        category_id: record.categoryId || record.category_id,
-        name: record.name,
-        description: record.description,
-        price: record.price,
-        is_veg: record.isVeg ?? record.is_veg ?? true,
-        image_url: record.imageUrl || record.image_url,
-        is_best_seller: record.isBestSeller ?? record.is_best_seller ?? false,
-        is_active: record.isActive ?? record.is_active ?? true,
+        category_id: payload.categoryId || payload.category_id,
+        subcategory_id: payload.subcategoryId || payload.subcategory_id,
+        name: payload.name,
+        description: payload.description,
+        slogan: payload.slogan,
+        price: payload.price ?? 0,
+        is_veg: payload.isVeg ?? payload.is_veg ?? true,
+        image_url: payload.imageUrl || payload.image_url,
+        is_best_seller: payload.isBestSeller ?? payload.is_best_seller ?? false,
+        is_active: payload.isActive ?? payload.is_active ?? true,
       });
       created.push(id);
     }

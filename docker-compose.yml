@@ -71,6 +71,8 @@ services:
     volumes:
       - uploads_data:/app/uploads
       - api_logs:/app/logs
+      - ./report:/app/report:ro
+      - ./src:/app/src:ro
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health/ready"]
       interval: 15s

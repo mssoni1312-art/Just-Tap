@@ -1,0 +1,34 @@
+.page-header,
+.page-footer {
+  padding: 10mm 14mm 0;
+}
+
+.cover-page {
+  background: #fffef8;
+  color: #2c2416;
+}
+
+.cover-title,
+.header-title,
+.section-title {
+  color: #8b6914;
+}
+
+.cover-page .page-content {
+  border: 2px double #c9a227;
+  margin: 14mm;
+  padding: 18mm;
+}
+
+.couple-photo,
+.gallery-item {
+  border: 1px solid #c9a227;
+}
+
+.menu-item-name {
+  color: #2c2416;
+}
+
+.footer-brand {
+  color: #8b6914;
+}

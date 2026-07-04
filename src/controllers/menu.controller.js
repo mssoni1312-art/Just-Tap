@@ -31,6 +31,12 @@ module.exports = {
     sendSuccess(res, await menuService.importCategories(getRecords(req)), 'Categories imported', 201);
   },
 
+  listSubCategories: async (req, res) => sendSuccess(res, await menuService.listSubCategories(req.query)),
+  getSubCategory: async (req, res) => sendSuccess(res, await menuService.getSubCategory(req.params.id)),
+  createSubCategory: async (req, res) => sendSuccess(res, await menuService.createSubCategory(req.body), 'Subcategory created', 201),
+  updateSubCategory: async (req, res) => sendSuccess(res, await menuService.updateSubCategory(req.params.id, req.body)),
+  deleteSubCategory: async (req, res) => sendSuccess(res, await menuService.deleteSubCategory(req.params.id)),
+
   listItems: async (req, res) => sendSuccess(res, await menuService.listItems(req.query)),
   getItem: async (req, res) => sendSuccess(res, await menuService.getItem(req.params.id)),
   createItem: async (req, res) => sendSuccess(res, await menuService.createItem(req.body), 'Item created', 201),

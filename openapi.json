@@ -3,7 +3,7 @@
   "info": {
     "title": "Just Tap Super Admin Mobile API",
     "version": "1.0.0",
-    "description": "REST API for the **Just Tap Mobile Super Admin** application (Figma Frame 1261155661).\n\n## Authentication\n1. Call `POST /auth/login` with email/phone and password.\n2. Copy the `accessToken` from the response.\n3. Add header on all protected routes: `Authorization: Bearer <accessToken>`.\n4. Refresh expired tokens via `POST /auth/token/refresh`.\n\n## Response format\nAll endpoints return JSON: `{ success, message, data }` on success or `{ success, message, errors }` on failure.\n\n## Validation\nRequest bodies and query params are validated with Joi. Validation errors return HTTP **422** with an `errors` array.\n\n## Pagination\nList endpoints accept `page`, `limit`, `search`, `sortBy`, `sortOrder` plus domain-specific filters.",
+    "description": "REST API for the **Just Tap Mobile Super Admin** application (Figma Frame 1261155661).\n\n## Authentication\n1. Call `POST /auth/login` with email/phone and password.\n2. Copy the `accessToken` from the response.\n3. Add header on all protected routes: `Authorization: Bearer <accessToken>`.\n4. Refresh expired tokens via `POST /auth/token/refresh`.\n\n## Response format\nAll endpoints return JSON: `{ success, message, data }` on success or `{ success, message, errors }` on failure.\n\n## Validation\nRequest bodies and query params are validated with Joi. Validation errors return HTTP **422** with an `errors` array.\n\n## Pagination\nList endpoints accept `page`, `limit`, `search`, `sortBy`, `sortOrder` plus domain-specific filters.\n\n## Menu Planning Flow\nUse these endpoints from the **Add Item** screen (categories/subcategories dropdowns + inline create):\n\n1. **Upload photo** — `POST /uploads/images` (multipart `file`), then use returned `url` as `image_url`.\n2. **Add Category** — `POST /menu/categories` with `name_english`, `slogan`, `image_url`.\n3. **Add Sub Category** — `POST /menu/subcategories` with `category_id`, `name_english`.\n4. **Add Item** — `POST /menu/items` with `name_english`, `slogan`, `category_id`, `subcategory_id`, `image_url`.\n\nDropdowns: `GET /menu/categories?limit=100` and `GET /menu/subcategories?categoryId={id}&limit=100`.",
     "contact": {
       "name": "Just Tap API Support",
       "email": "admin@justtap.com"
@@ -49,7 +49,11 @@
     },
     {
       "name": "Menu",
-      "description": "Menu categories, items, packages, planning"
+      "description": "Menu categories, items, packages, and catalog management"
+    },
+    {
+      "name": "Menu Planning",
+      "description": "Add Item flow — create categories, subcategories, and menu items"
     },
     {
       "name": "Tasks",
@@ -98,6 +102,10 @@
     {
       "name": "Uploads",
       "description": "Image and document uploads"
+    },
+    {
+      "name": "Report Builder",
+      "description": "Menu report designer — templates, theme, typography, and client sharing"
     }
   ],
   "paths": {
@@ -4582,10 +4590,11 @@
     "/menu/categories": {
       "get": {
         "tags": [
-          "Menu"
+          "Menu",
+          "Menu Planning"
         ],
-        "summary": "List menu categories",
-        "description": "",
+        "summary": "List menu categories (dropdown)",
+        "description": "Returns paginated categories for the **Menu Item Category** dropdown on the Add Item screen.",
         "operationId": "menuCategoriesList",
         "security": [
           {
@@ -4656,7 +4665,7 @@
                     {
                       "properties": {
                         "data": {
-                          "$ref": "#/components/schemas/PaginatedList"
+                          "$ref": "#/components/schemas/PaginatedMenuCategoryList"
                         }
                       }
                     }
@@ -4693,10 +4702,11 @@
       },
       "post": {
         "tags": [
-          "Menu"
+          "Menu",
+          "Menu Planning"
         ],
-        "summary": "Create menu category",
-        "description": "",
+        "summary": "Add menu category",
+        "description": "Creates a category from the **Menu Item Category** bottom sheet (name, slogan, photo).",
         "operationId": "menuCategoriesCreate",
         "security": [
           {
@@ -4715,12 +4725,23 @@
           }
         },
         "responses": {
-          "200": {
+          "201": {
             "description": "Category created",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SuccessResponse"
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/MenuCategory"
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -5309,13 +5330,423 @@
         }
       }
     },
-    "/menu/items": {
+    "/menu/subcategories": {
+      "get": {
+        "tags": [
+          "Menu",
+          "Menu Planning"
+        ],
+        "summary": "List menu subcategories (dropdown)",
+        "description": "Returns subcategories for the **Menu Item Sub Category** dropdown. Filter by `categoryId` when a category is selected.",
+        "operationId": "menuSubCategoriesList",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 20
+            },
+            "description": "Items per page"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Full-text search term"
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Sort column"
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            }
+          },
+          {
+            "name": "categoryId",
+            "in": "query",
+            "description": "Filter subcategories by parent category (numeric ID or UUID)",
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              ]
+            },
+            "example": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/PaginatedMenuSubCategoryList"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Menu",
+          "Menu Planning"
+        ],
+        "summary": "Add menu subcategory",
+        "description": "Creates a subcategory from the **Menu Sub Item Category** bottom sheet.",
+        "operationId": "menuSubCategoriesCreate",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMenuSubCategoryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Subcategory created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/MenuSubCategory"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/menu/subcategories/{id}": {
       "get": {
         "tags": [
           "Menu"
         ],
-        "summary": "List menu items",
+        "summary": "Get subcategory by ID",
         "description": "",
+        "operationId": "menuSubCategoriesGetById",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Record ID (numeric or UUID)",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/MenuSubCategory"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Menu"
+        ],
+        "summary": "Update subcategory",
+        "description": "",
+        "operationId": "menuSubCategoriesUpdate",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Record ID (numeric or UUID)",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMenuSubCategoryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Menu"
+        ],
+        "summary": "Delete subcategory",
+        "description": "",
+        "operationId": "menuSubCategoriesDelete",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Record ID (numeric or UUID)",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/menu/items": {
+      "get": {
+        "tags": [
+          "Menu",
+          "Menu Planning"
+        ],
+        "summary": "List menu items",
+        "description": "List menu items. Supports `categoryId` and `subcategoryId` filters.",
         "operationId": "menuItemsList",
         "security": [
           {
@@ -5371,6 +5802,22 @@
               ],
               "default": "desc"
             }
+          },
+          {
+            "name": "categoryId",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter by category"
+          },
+          {
+            "name": "subcategoryId",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter by subcategory"
           }
         ],
         "responses": {
@@ -5386,7 +5833,7 @@
                     {
                       "properties": {
                         "data": {
-                          "$ref": "#/components/schemas/PaginatedList"
+                          "$ref": "#/components/schemas/PaginatedMenuItemList"
                         }
                       }
                     }
@@ -5423,10 +5870,11 @@
       },
       "post": {
         "tags": [
-          "Menu"
+          "Menu",
+          "Menu Planning"
         ],
-        "summary": "Create menu item",
-        "description": "",
+        "summary": "Add menu item",
+        "description": "Creates a menu item from the **Add new item** screen. Upload photo first via `POST /uploads/images`.",
         "operationId": "menuItemsCreate",
         "security": [
           {
@@ -5445,12 +5893,23 @@
           }
         },
         "responses": {
-          "200": {
+          "201": {
             "description": "Item created",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SuccessResponse"
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/MenuItem"
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -9529,6 +9988,1243 @@
           }
         }
       }
+    },
+    "/report/meta": {
+      "get": {
+        "tags": [
+          "Report Builder"
+        ],
+        "summary": "Report builder metadata",
+        "description": "",
+        "operationId": "reportMeta",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ReportMeta"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/report/templates": {
+      "get": {
+        "tags": [
+          "Report Builder"
+        ],
+        "summary": "List report templates",
+        "description": "Fetch design templates from the database. Filter by category: all, luxury, minimal, classic, custom.",
+        "operationId": "reportTemplatesList",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 20
+            },
+            "description": "Items per page"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Full-text search term"
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Sort column"
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "luxury",
+                "minimal",
+                "classic",
+                "custom"
+              ],
+              "default": "all"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/PaginatedList"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/report/create": {
+      "post": {
+        "tags": [
+          "Report Builder"
+        ],
+        "summary": "Create report",
+        "description": "Create a new menu report for an event. One report per event is allowed.",
+        "operationId": "reportCreate",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ReportDetail"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/report/upload-photo": {
+      "post": {
+        "tags": [
+          "Report Builder"
+        ],
+        "summary": "Upload report photo",
+        "description": "Upload bride/groom or decorative photo. Stores URL via existing upload service (no Base64).",
+        "operationId": "reportUploadPhoto",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file",
+                  "reportId"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "reportId": {
+                    "$ref": "#/components/schemas/IdParam"
+                  },
+                  "sortOrder": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 0
+                  },
+                  "setAsBrideGroomPhoto": {
+                    "type": "boolean",
+                    "default": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ReportPhotoUploadResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/report/template/select": {
+      "post": {
+        "tags": [
+          "Report Builder"
+        ],
+        "summary": "Select template",
+        "description": "",
+        "operationId": "reportSelectTemplate",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectReportTemplateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ReportDetail"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/report/theme": {
+      "patch": {
+        "tags": [
+          "Report Builder"
+        ],
+        "summary": "Update color theme",
+        "description": "",
+        "operationId": "reportUpdateTheme",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateReportThemeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ReportDetail"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/report/typography": {
+      "patch": {
+        "tags": [
+          "Report Builder"
+        ],
+        "summary": "Update typography",
+        "description": "",
+        "operationId": "reportUpdateTypography",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateReportTypographyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ReportDetail"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/report/grid": {
+      "patch": {
+        "tags": [
+          "Report Builder"
+        ],
+        "summary": "Update grid spacing",
+        "description": "",
+        "operationId": "reportUpdateGrid",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateReportGridRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ReportDetail"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/report/photo-filter": {
+      "patch": {
+        "tags": [
+          "Report Builder"
+        ],
+        "summary": "Update photo filter",
+        "description": "",
+        "operationId": "reportUpdatePhotoFilter",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateReportPhotoFilterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ReportDetail"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/report/save-draft": {
+      "post": {
+        "tags": [
+          "Report Builder"
+        ],
+        "summary": "Save draft",
+        "description": "",
+        "operationId": "reportSaveDraft",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveReportDraftRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ReportDetail"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/report/publish": {
+      "post": {
+        "tags": [
+          "Report Builder"
+        ],
+        "summary": "Publish report",
+        "description": "",
+        "operationId": "reportPublish",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportIdRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ReportDetail"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/report/share": {
+      "post": {
+        "tags": [
+          "Report Builder"
+        ],
+        "summary": "Share report with client",
+        "description": "",
+        "operationId": "reportShare",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareReportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ReportShareResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/report/generate-pdf": {
+      "post": {
+        "tags": [
+          "Report Builder"
+        ],
+        "summary": "Generate premium PDF",
+        "description": "Generates a print-ready A4 PDF from the report using HTML + CSS + Puppeteer. Loads report data, images, theme, typography, grid, menu sections, and Handlebars template, then stores the PDF URL.",
+        "operationId": "reportGeneratePdf",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportIdRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ReportPdfGenerateResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/report/pdf/{reportId}/download": {
+      "get": {
+        "tags": [
+          "Report Builder"
+        ],
+        "summary": "Download report PDF",
+        "description": "Download the generated PDF file. Pass `urlOnly=true` to receive JSON with `pdfUrl` instead.",
+        "operationId": "reportDownloadPdf",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "reportId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Report ID (numeric or UUID)",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          },
+          {
+            "name": "urlOnly",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Return JSON `{ pdfUrl }` instead of file download"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PDF file stream (when urlOnly is false)",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/report/pdf/{reportId}": {
+      "delete": {
+        "tags": [
+          "Report Builder"
+        ],
+        "summary": "Delete report PDF",
+        "description": "",
+        "operationId": "reportDeletePdf",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "reportId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Report ID (numeric or UUID)",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ReportPdfDeleteResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/report/{id}": {
+      "get": {
+        "tags": [
+          "Report Builder"
+        ],
+        "summary": "Get report by ID",
+        "description": "",
+        "operationId": "reportGetById",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Report ID (numeric or UUID)",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ReportDetail"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -10453,18 +12149,30 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "integer"
+            "type": "string",
+            "example": "1"
           },
           "uuid": {
             "type": "string",
             "format": "uuid"
           },
           "name": {
-            "type": "string"
+            "type": "string",
+            "example": "Starters"
           },
           "description": {
             "type": "string",
             "nullable": true
+          },
+          "slogan": {
+            "type": "string",
+            "nullable": true,
+            "example": "स्टारters"
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": "http://localhost:3000/uploads/images/abc.jpg"
           },
           "sortOrder": {
             "type": "integer"
@@ -10474,35 +12182,111 @@
           }
         }
       },
+      "PaginatedMenuCategoryList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MenuCategory"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        }
+      },
+      "MenuSubCategory": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "2"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "North Indian"
+          },
+          "categoryId": {
+            "type": "integer",
+            "example": 1
+          },
+          "category": {
+            "type": "string",
+            "example": "Starters"
+          },
+          "sortOrder": {
+            "type": "integer"
+          }
+        }
+      },
+      "PaginatedMenuSubCategoryList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MenuSubCategory"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        }
+      },
       "MenuItem": {
         "type": "object",
         "properties": {
           "id": {
-            "type": "integer"
+            "type": "string",
+            "example": "9"
           },
           "uuid": {
             "type": "string",
             "format": "uuid"
           },
           "categoryId": {
-            "type": "integer"
+            "type": "integer",
+            "example": 1
+          },
+          "subcategoryId": {
+            "type": "integer",
+            "nullable": true,
+            "example": 2
+          },
+          "subcategory": {
+            "type": "string",
+            "nullable": true,
+            "example": "North Indian"
           },
           "name": {
-            "type": "string"
+            "type": "string",
+            "example": "Paneer Tikka"
           },
           "description": {
             "type": "string",
             "nullable": true
           },
+          "slogan": {
+            "type": "string",
+            "nullable": true,
+            "example": "पनीर टिक्का"
+          },
           "price": {
-            "type": "number"
+            "type": "string",
+            "example": "350.00"
           },
           "isVeg": {
             "type": "boolean"
           },
           "imageUrl": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "example": "http://localhost:3000/uploads/images/item.jpg"
           },
           "isBestSeller": {
             "type": "boolean"
@@ -10512,48 +12296,140 @@
           }
         }
       },
+      "PaginatedMenuItemList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MenuItem"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        }
+      },
       "CreateMenuCategoryRequest": {
         "type": "object",
-        "required": [
-          "name"
-        ],
+        "description": "Menu Item Category form — provide `name_english` or `name`. Upload photo first via POST /uploads/images.",
         "properties": {
           "name": {
+            "type": "string",
+            "example": "Starters"
+          },
+          "name_english": {
             "type": "string",
             "example": "Starters"
           },
           "description": {
             "type": "string"
           },
+          "slogan": {
+            "type": "string",
+            "example": "स्टारters",
+            "description": "Hindi name or tagline (Slogan field in UI)"
+          },
+          "image_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "http://localhost:3000/uploads/images/category.jpg"
+          },
           "sort_order": {
             "type": "integer",
             "minimum": 0
           }
+        },
+        "example": {
+          "name_english": "Starters",
+          "slogan": "स्टारters",
+          "image_url": "http://localhost:3000/uploads/images/category.jpg"
+        }
+      },
+      "CreateMenuSubCategoryRequest": {
+        "type": "object",
+        "description": "Menu Sub Item Category form — name only, linked to a parent category.",
+        "required": [
+          "category_id"
+        ],
+        "properties": {
+          "category_id": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "format": "uuid"
+              }
+            ],
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "example": "North Indian"
+          },
+          "name_english": {
+            "type": "string",
+            "example": "North Indian"
+          },
+          "sort_order": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "example": {
+          "category_id": 1,
+          "name_english": "North Indian"
         }
       },
       "CreateMenuItemRequest": {
         "type": "object",
+        "description": "Add new item form — select category and subcategory from dropdowns or create them inline first.",
         "required": [
-          "category_id",
-          "name",
-          "price"
+          "category_id"
         ],
         "properties": {
           "category_id": {
             "type": "integer",
-            "example": 1
+            "example": 1,
+            "description": "Menu Item Category (dropdown)"
+          },
+          "subcategory_id": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "format": "uuid"
+              }
+            ],
+            "nullable": true,
+            "example": 2,
+            "description": "Menu Item Sub Category (dropdown)"
           },
           "name": {
+            "type": "string",
+            "example": "Paneer Tikka"
+          },
+          "name_english": {
             "type": "string",
             "example": "Paneer Tikka"
           },
           "description": {
             "type": "string"
           },
+          "slogan": {
+            "type": "string",
+            "example": "पनीर टिक्का",
+            "description": "Hindi name or tagline (Slogan field in UI)"
+          },
           "price": {
             "type": "number",
             "minimum": 0,
-            "example": 350
+            "example": 0,
+            "default": 0
           },
           "is_veg": {
             "type": "boolean",
@@ -10561,7 +12437,8 @@
           },
           "image_url": {
             "type": "string",
-            "format": "uri"
+            "format": "uri",
+            "example": "http://localhost:3000/uploads/images/item.jpg"
           },
           "is_best_seller": {
             "type": "boolean"
@@ -10569,6 +12446,14 @@
           "is_active": {
             "type": "boolean"
           }
+        },
+        "example": {
+          "name_english": "Paneer Tikka",
+          "slogan": "पनीर टिक्का",
+          "category_id": 1,
+          "subcategory_id": 2,
+          "image_url": "http://localhost:3000/uploads/images/item.jpg",
+          "price": 0
         }
       },
       "PackageFeature": {
@@ -11321,6 +13206,598 @@
           },
           "size": {
             "type": "integer"
+          }
+        }
+      },
+      "ReportIdRequest": {
+        "type": "object",
+        "required": [
+          "reportId"
+        ],
+        "properties": {
+          "reportId": {
+            "$ref": "#/components/schemas/IdParam"
+          }
+        }
+      },
+      "CreateReportRequest": {
+        "type": "object",
+        "required": [
+          "eventId"
+        ],
+        "properties": {
+          "eventId": {
+            "$ref": "#/components/schemas/IdParam"
+          },
+          "packageId": {
+            "$ref": "#/components/schemas/IdParam",
+            "nullable": true
+          },
+          "templateId": {
+            "$ref": "#/components/schemas/IdParam",
+            "nullable": true
+          },
+          "includeMenuInTemplate": {
+            "type": "boolean",
+            "default": true
+          },
+          "layoutPosition": {
+            "type": "string",
+            "enum": [
+              "top",
+              "background",
+              "side"
+            ],
+            "nullable": true
+          }
+        },
+        "example": {
+          "eventId": 1,
+          "packageId": 2,
+          "includeMenuInTemplate": true,
+          "layoutPosition": "top"
+        }
+      },
+      "SelectReportTemplateRequest": {
+        "type": "object",
+        "required": [
+          "reportId",
+          "templateId"
+        ],
+        "properties": {
+          "reportId": {
+            "$ref": "#/components/schemas/IdParam"
+          },
+          "templateId": {
+            "$ref": "#/components/schemas/IdParam"
+          }
+        }
+      },
+      "ReportColorValue": {
+        "type": "object",
+        "required": [
+          "hex"
+        ],
+        "properties": {
+          "hex": {
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$",
+            "example": "#D4AF37"
+          },
+          "opacity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 100
+          }
+        }
+      },
+      "UpdateReportThemeRequest": {
+        "type": "object",
+        "required": [
+          "reportId",
+          "colors"
+        ],
+        "properties": {
+          "reportId": {
+            "$ref": "#/components/schemas/IdParam"
+          },
+          "colors": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ReportColorValue"
+            },
+            "example": {
+              "primary": {
+                "hex": "#A9A9A9",
+                "opacity": 100
+              },
+              "secondary": {
+                "hex": "#D4AF37",
+                "opacity": 100
+              }
+            }
+          }
+        }
+      },
+      "UpdateReportTypographyRequest": {
+        "type": "object",
+        "required": [
+          "reportId"
+        ],
+        "properties": {
+          "reportId": {
+            "$ref": "#/components/schemas/IdParam"
+          },
+          "fontPairing": {
+            "type": "string",
+            "enum": [
+              "playfair_inter",
+              "space_grotesk_mono",
+              "fraunces_inter"
+            ]
+          },
+          "sizeScaling": {
+            "type": "number",
+            "minimum": 50,
+            "maximum": 200,
+            "example": 100
+          }
+        }
+      },
+      "UpdateReportGridRequest": {
+        "type": "object",
+        "required": [
+          "reportId"
+        ],
+        "properties": {
+          "reportId": {
+            "$ref": "#/components/schemas/IdParam"
+          },
+          "preset": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "default",
+              "spacious"
+            ]
+          },
+          "customIntensity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "example": 70
+          }
+        }
+      },
+      "UpdateReportPhotoFilterRequest": {
+        "type": "object",
+        "required": [
+          "reportId"
+        ],
+        "properties": {
+          "reportId": {
+            "$ref": "#/components/schemas/IdParam"
+          },
+          "preset": {
+            "type": "string",
+            "enum": [
+              "none",
+              "vintage_gold",
+              "high_contrast",
+              "warm",
+              "cool",
+              "sepia"
+            ]
+          },
+          "intensity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "example": 80
+          }
+        }
+      },
+      "SaveReportDraftRequest": {
+        "type": "object",
+        "required": [
+          "reportId"
+        ],
+        "properties": {
+          "reportId": {
+            "$ref": "#/components/schemas/IdParam"
+          },
+          "packageId": {
+            "$ref": "#/components/schemas/IdParam",
+            "nullable": true
+          },
+          "includeMenuInTemplate": {
+            "type": "boolean"
+          },
+          "layoutPosition": {
+            "type": "string",
+            "enum": [
+              "top",
+              "background",
+              "side"
+            ],
+            "nullable": true
+          }
+        }
+      },
+      "ShareReportRequest": {
+        "type": "object",
+        "required": [
+          "reportId"
+        ],
+        "properties": {
+          "reportId": {
+            "$ref": "#/components/schemas/IdParam"
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "ReportMeta": {
+        "type": "object",
+        "properties": {
+          "templateCategories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fontPairings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "gridPresets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "photoFilterPresets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "layoutPositions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "statuses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ReportTemplate": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "luxury",
+              "minimal",
+              "classic",
+              "custom"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "previewUrl": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "type": "integer"
+          }
+        }
+      },
+      "ReportPhoto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "imageUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "sortOrder": {
+            "type": "integer"
+          }
+        }
+      },
+      "ReportDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "eventUuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clientName": {
+            "type": "string"
+          },
+          "brideName": {
+            "type": "string",
+            "nullable": true
+          },
+          "groomName": {
+            "type": "string",
+            "nullable": true
+          },
+          "eventStartDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "venueName": {
+            "type": "string"
+          },
+          "cityName": {
+            "type": "string"
+          },
+          "template": {
+            "$ref": "#/components/schemas/ReportTemplate",
+            "nullable": true
+          },
+          "package": {
+            "type": "object",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "published",
+              "shared"
+            ]
+          },
+          "includeMenuInTemplate": {
+            "type": "boolean"
+          },
+          "layoutPosition": {
+            "type": "string",
+            "enum": [
+              "top",
+              "background",
+              "side"
+            ],
+            "nullable": true
+          },
+          "brideGroomPhotoUrl": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
+          "typography": {
+            "type": "object"
+          },
+          "grid": {
+            "type": "object"
+          },
+          "photoFilter": {
+            "type": "object"
+          },
+          "theme": {
+            "type": "object"
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportPhoto"
+            }
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ReportPhotoUploadResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "originalName": {
+            "type": "string"
+          },
+          "reportId": {
+            "type": "string"
+          },
+          "setAsBrideGroomPhoto": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ReportShareResponse": {
+        "type": "object",
+        "properties": {
+          "reportId": {
+            "type": "string"
+          },
+          "shareToken": {
+            "type": "string"
+          },
+          "shareUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "sharedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ReportPdfGenerateResponse": {
+        "type": "object",
+        "properties": {
+          "pdfUrl": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://api.example.com/uploads/reports/report-1-abc.pdf"
+          },
+          "pdfId": {
+            "type": "string"
+          },
+          "pageCount": {
+            "type": "integer",
+            "example": 4
+          },
+          "fileSizeBytes": {
+            "type": "integer",
+            "example": 245760
+          },
+          "templateSlug": {
+            "type": "string",
+            "example": "royal-noir"
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ReportPdfDownloadResponse": {
+        "type": "object",
+        "properties": {
+          "pdfUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "pdf": {
+            "$ref": "#/components/schemas/ReportPdfRecord"
+          }
+        }
+      },
+      "ReportPdfDeleteResponse": {
+        "type": "object",
+        "properties": {
+          "reportId": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "ReportPdfRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reportId": {
+            "type": "string"
+          },
+          "pdfUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "storedName": {
+            "type": "string"
+          },
+          "fileSizeBytes": {
+            "type": "integer",
+            "nullable": true
+          },
+          "pageCount": {
+            "type": "integer",
+            "nullable": true
+          },
+          "templateSlug": {
+            "type": "string",
+            "nullable": true
+          },
+          "generatedBy": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       }

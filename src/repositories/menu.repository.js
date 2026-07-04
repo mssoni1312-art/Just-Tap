@@ -29,6 +29,8 @@ const menuRepository = {
       uuid: r.uuid,
       name: r.name,
       description: r.description,
+      slogan: r.slogan,
+      imageUrl: r.image_url,
       itemCount: r.item_count,
       sortOrder: r.sort_order,
     }));
@@ -85,8 +87,8 @@ const menuRepository = {
 
   async createCategory(data) {
     const [result] = await pool.execute(
-      'INSERT INTO menu_categories (name, description, sort_order) VALUES (?, ?, ?)',
-      [data.name, data.description || null, data.sort_order || 0]
+      'INSERT INTO menu_categories (name, description, slogan, image_url, sort_order) VALUES (?, ?, ?, ?, ?)',
+      [data.name, data.description || null, data.slogan || null, data.image_url || null, data.sort_order || 0]
     );
     return result.insertId;
   },
@@ -94,7 +96,7 @@ const menuRepository = {
   async updateCategory(id, data) {
     const fields = [];
     const values = [];
-    for (const key of ['name', 'description', 'sort_order']) {
+    for (const key of ['name', 'description', 'slogan', 'image_url', 'sort_order']) {
       if (data[key] !== undefined) {
         fields.push(`${key} = ?`);
         values.push(data[key]);
@@ -112,6 +114,87 @@ const menuRepository = {
     await pool.execute('UPDATE menu_categories SET deleted_at = NOW() WHERE id = ?', [id]);
   },
 
+  async findSubCategories(query) {
+    const { page, limit, offset, sortOrder } = parsePagination(query);
+    const sortBy = sanitizeSortBy('menu_subcategories', query.sortBy);
+    const conditions = ['ms.deleted_at IS NULL', 'mc.deleted_at IS NULL'];
+    const params = [];
+    if (query.categoryId) {
+      conditions.push('ms.category_id = ?');
+      params.push(query.categoryId);
+    }
+    if (query.search) {
+      conditions.push('ms.name LIKE ?');
+      params.push(`%${query.search}%`);
+    }
+    const where = conditions.join(' AND ');
+    const [countRows] = await pool.execute(
+      `SELECT COUNT(*) AS total
+       FROM menu_subcategories ms
+       JOIN menu_categories mc ON mc.id = ms.category_id
+       WHERE ${where}`,
+      params
+    );
+    const [rows] = await pool.execute(
+      `SELECT ms.*, mc.name AS category_name
+       FROM menu_subcategories ms
+       JOIN menu_categories mc ON mc.id = ms.category_id
+       WHERE ${where}
+       ORDER BY ms.${sortBy} ${sortOrder}
+       LIMIT ${limit} OFFSET ${offset}`,
+      params
+    );
+    const items = rows.map((r) => ({
+      id: String(r.id),
+      uuid: r.uuid,
+      name: r.name,
+      categoryId: r.category_id,
+      category: r.category_name,
+      sortOrder: r.sort_order,
+    }));
+    return buildPaginatedResponse(items, countRows[0].total, page, limit);
+  },
+
+  async findSubCategoryById(id) {
+    const [rows] = await pool.execute(
+      `SELECT ms.*, mc.name AS category_name
+       FROM menu_subcategories ms
+       JOIN menu_categories mc ON mc.id = ms.category_id
+       WHERE ms.id = ? AND ms.deleted_at IS NULL`,
+      [id]
+    );
+    return rows[0] || null;
+  },
+
+  async createSubCategory(data) {
+    const [result] = await pool.execute(
+      'INSERT INTO menu_subcategories (category_id, name, sort_order) VALUES (?, ?, ?)',
+      [data.category_id, data.name, data.sort_order || 0]
+    );
+    return result.insertId;
+  },
+
+  async updateSubCategory(id, data) {
+    const fields = [];
+    const values = [];
+    for (const key of ['category_id', 'name', 'sort_order']) {
+      if (data[key] !== undefined) {
+        fields.push(`${key} = ?`);
+        values.push(data[key]);
+      }
+    }
+    if (!fields.length) return;
+    values.push(id);
+    await pool.execute(
+      `UPDATE menu_subcategories SET ${fields.join(', ')}, updated_at = NOW() WHERE id = ? AND deleted_at IS NULL`,
+      values
+    );
+  },
+
+  async deleteSubCategory(id) {
+    await pool.execute('UPDATE menu_subcategories SET deleted_at = NOW() WHERE id = ?', [id]);
+  },
+
   async findItems(query) {
     const { page, limit, offset, sortOrder } = parsePagination(query);
     const sortBy = sanitizeSortBy('menu_items', query.sortBy);
@@ -125,6 +208,10 @@ const menuRepository = {
       conditions.push('mi.category_id = ?');
       params.push(query.categoryId);
     }
+    if (query.subcategoryId) {
+      conditions.push('mi.subcategory_id = ?');
+      params.push(query.subcategoryId);
+    }
     if (query.search) {
       conditions.push('mi.name LIKE ?');
       params.push(`%${query.search}%`);
@@ -135,9 +222,10 @@ const menuRepository = {
       params
     );
     const [rows] = await pool.execute(
-      `SELECT mi.*, mc.name AS category_name
+      `SELECT mi.*, mc.name AS category_name, ms.name AS subcategory_name
        FROM menu_items mi
        JOIN menu_categories mc ON mc.id = mi.category_id
+       LEFT JOIN menu_subcategories ms ON ms.id = mi.subcategory_id AND ms.deleted_at IS NULL
        WHERE ${where}
        ORDER BY mi.${sortBy} ${sortOrder}
        LIMIT ${limit} OFFSET ${offset}`,
@@ -149,20 +237,24 @@ const menuRepository = {
       name: r.name,
       category: r.category_name,
       categoryId: r.category_id,
+      subcategory: r.subcategory_name,
+      subcategoryId: r.subcategory_id,
       price: String(r.price),
       isVeg: Boolean(r.is_veg),
       imageUrl: r.image_url,
       isBestSeller: Boolean(r.is_best_seller),
       description: r.description,
+      slogan: r.slogan,
     }));
     return buildPaginatedResponse(items, countRows[0].total, page, limit);
   },
 
   async findItemById(id) {
     const [rows] = await pool.execute(
-      `SELECT mi.*, mc.name AS category_name
+      `SELECT mi.*, mc.name AS category_name, ms.name AS subcategory_name
        FROM menu_items mi
        JOIN menu_categories mc ON mc.id = mi.category_id
+       LEFT JOIN menu_subcategories ms ON ms.id = mi.subcategory_id AND ms.deleted_at IS NULL
        WHERE mi.id = ? AND mi.deleted_at IS NULL`,
       [id]
     );
@@ -203,6 +295,10 @@ const menuRepository = {
       fields.push('category_id = ?');
       values.push(data.category_id);
     }
+    if (data.subcategory_id !== undefined) {
+      fields.push('subcategory_id = ?');
+      values.push(data.subcategory_id);
+    }
     if (!fields.length) return 0;
     const placeholders = ids.map(() => '?').join(',');
     const [result] = await pool.execute(
@@ -215,13 +311,15 @@ const menuRepository = {
 
   async createItem(data) {
     const [result] = await pool.execute(
-      `INSERT INTO menu_items (category_id, name, description, price, is_veg, image_url, is_best_seller, is_active)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO menu_items (category_id, subcategory_id, name, description, slogan, price, is_veg, image_url, is_best_seller, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.category_id,
+        data.subcategory_id || null,
         data.name,
         data.description || null,
-        data.price,
+        data.slogan || null,
+        data.price ?? 0,
         data.is_veg !== false ? 1 : 0,
         data.image_url || null,
         data.is_best_seller ? 1 : 0,
@@ -234,7 +332,7 @@ const menuRepository = {
   async updateItem(id, data) {
     const fields = [];
     const values = [];
-    const allowed = ['category_id', 'name', 'description', 'price', 'is_veg', 'image_url', 'is_best_seller', 'is_active'];
+    const allowed = ['category_id', 'subcategory_id', 'name', 'description', 'slogan', 'price', 'is_veg', 'image_url', 'is_best_seller', 'is_active'];
     for (const key of allowed) {
       if (data[key] !== undefined) {
         fields.push(`${key} = ?`);

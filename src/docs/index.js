@@ -13,6 +13,7 @@ const {
   activityPaths,
   miscPaths,
 } = require('./paths/operations.paths');
+const reportPaths = require('./paths/report.paths');
 
 const buildOpenApiSpec = () => ({
   openapi: '3.0.3',
@@ -36,6 +37,16 @@ const buildOpenApiSpec = () => ({
       '',
       '## Pagination',
       'List endpoints accept `page`, `limit`, `search`, `sortBy`, `sortOrder` plus domain-specific filters.',
+      '',
+      '## Menu Planning Flow',
+      'Use these endpoints from the **Add Item** screen (categories/subcategories dropdowns + inline create):',
+      '',
+      '1. **Upload photo** — `POST /uploads/images` (multipart `file`), then use returned `url` as `image_url`.',
+      '2. **Add Category** — `POST /menu/categories` with `name_english`, `slogan`, `image_url`.',
+      '3. **Add Sub Category** — `POST /menu/subcategories` with `category_id`, `name_english`.',
+      '4. **Add Item** — `POST /menu/items` with `name_english`, `slogan`, `category_id`, `subcategory_id`, `image_url`.',
+      '',
+      'Dropdowns: `GET /menu/categories?limit=100` and `GET /menu/subcategories?categoryId={id}&limit=100`.',
     ].join('\n'),
     contact: { name: 'Just Tap API Support', email: 'admin@justtap.com' },
     license: { name: 'Proprietary' },
@@ -51,7 +62,8 @@ const buildOpenApiSpec = () => ({
     { name: 'Dashboard', description: 'Home screen aggregated data' },
     { name: 'Events', description: 'Event CRUD, calendar, functions, nested operations' },
     { name: 'Inquiries', description: 'Inquiry management and conversion' },
-    { name: 'Menu', description: 'Menu categories, items, packages, planning' },
+    { name: 'Menu', description: 'Menu categories, items, packages, and catalog management' },
+    { name: 'Menu Planning', description: 'Add Item flow — create categories, subcategories, and menu items' },
     { name: 'Tasks', description: 'Task templates and event task assignment' },
     { name: 'Staff', description: 'Staff master data' },
     { name: 'Managers', description: 'Event manager list for assignment dropdowns' },
@@ -64,6 +76,7 @@ const buildOpenApiSpec = () => ({
     { name: 'Analytics', description: 'Sales and reporting analytics' },
     { name: 'Content', description: 'Static content pages' },
     { name: 'Uploads', description: 'Image and document uploads' },
+    { name: 'Report Builder', description: 'Menu report designer — templates, theme, typography, and client sharing' },
   ],
   paths: {
     '/health': {
@@ -137,6 +150,7 @@ const buildOpenApiSpec = () => ({
     ...ordersPaths,
     ...activityPaths,
     ...miscPaths,
+    ...reportPaths,
   },
   components,
   security: [{ bearerAuth: [] }],

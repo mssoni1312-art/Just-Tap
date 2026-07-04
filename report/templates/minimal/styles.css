@@ -1,0 +1,39 @@
+.page-header,
+.page-footer {
+  padding: 10mm 14mm 0;
+}
+
+.cover-page {
+  background: #ffffff;
+  color: #1a1a1a;
+}
+
+.cover-title,
+.header-title,
+.section-title {
+  color: #1a1a1a;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+}
+
+.gold-line {
+  background: #1a1a1a;
+  height: 1px;
+}
+
+.premium-frame {
+  display: none;
+}
+
+.menu-grid {
+  grid-template-columns: 1fr;
+  gap: calc(var(--grid-gap) * 1.5);
+}
+
+.menu-item-desc {
+  color: #666;
+}
+
+.cover-page .cover-package {
+  border-color: #1a1a1a;
+}

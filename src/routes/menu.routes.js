@@ -9,6 +9,9 @@ const { paginationSchema } = require('../validations/auth.validation');
 const {
   createCategorySchema,
   updateCategorySchema,
+  createSubCategorySchema,
+  updateSubCategorySchema,
+  listSubCategoriesSchema,
   createItemSchema,
   updateItemSchema,
   bulkIdsSchema,
@@ -35,6 +38,12 @@ router.patch('/categories/bulk-update', validate(bulkUpdateCategoriesSchema), as
 router.get('/categories/:id', validate(idParamSchema, 'params'), asyncHandler(menuController.getCategory));
 router.patch('/categories/:id', validate(idParamSchema, 'params'), validate(updateCategorySchema), asyncHandler(menuController.updateCategory));
 router.delete('/categories/:id', validate(idParamSchema, 'params'), asyncHandler(menuController.deleteCategory));
+
+router.get('/subcategories', validate(listSubCategoriesSchema, 'query'), asyncHandler(menuController.listSubCategories));
+router.post('/subcategories', validate(createSubCategorySchema), asyncHandler(menuController.createSubCategory));
+router.get('/subcategories/:id', validate(idParamSchema, 'params'), asyncHandler(menuController.getSubCategory));
+router.patch('/subcategories/:id', validate(idParamSchema, 'params'), validate(updateSubCategorySchema), asyncHandler(menuController.updateSubCategory));
+router.delete('/subcategories/:id', validate(idParamSchema, 'params'), asyncHandler(menuController.deleteSubCategory));
 
 router.get('/items/export', validate(exportQuerySchema, 'query'), asyncHandler(menuController.exportItems));
 router.post('/items/import', uploadImport.single('file'), asyncHandler(menuController.importItems));

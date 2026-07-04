@@ -5,8 +5,12 @@ FROM node:20-alpine AS base
 WORKDIR /app
 
 RUN apk add --no-cache wget tini \
+    chromium nss freetype harfbuzz ca-certificates ttf-freefont \
   && addgroup -g 1001 -S nodejs \
-  && adduser -S nodejs -u 1001 -G nodejs
+  && adduser -S nodejs -u 1001 -G nodejs \
+  && if [ -x /usr/bin/chromium ] && [ ! -e /usr/bin/chromium-browser ]; then ln -s /usr/bin/chromium /usr/bin/chromium-browser; fi
+
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 COPY package.json package-lock.json ./
 
@@ -17,13 +21,14 @@ FROM base AS build
 COPY . .
 
 RUN npm run build \
-  && chown -R nodejs:nodejs /app/uploads /app/logs 2>/dev/null || true \
-  && mkdir -p uploads/images uploads/documents logs \
-  && chown -R nodejs:nodejs uploads logs
+  && chown -R nodejs:nodejs /app/uploads /app/logs /app/report 2>/dev/null || true \
+  && mkdir -p uploads/images uploads/documents uploads/reports logs \
+  && chown -R nodejs:nodejs uploads logs report
 
 FROM base AS production
 
 COPY --from=build --chown=nodejs:nodejs /app/src ./src
+COPY --from=build --chown=nodejs:nodejs /app/report ./report
 COPY --from=build --chown=nodejs:nodejs /app/scripts ./scripts
 COPY --from=build --chown=nodejs:nodejs /app/docker ./docker
 COPY --from=build --chown=nodejs:nodejs /app/openapi.json ./openapi.json

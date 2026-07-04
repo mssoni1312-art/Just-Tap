@@ -74,14 +74,18 @@ const inquiriesPaths = {
 
 const menuPaths = {
   '/menu/categories': {
-    get: op('get', ['Menu'], 'List menu categories', {
+    get: op('get', ['Menu', 'Menu Planning'], 'List menu categories (dropdown)', {
       operationId: 'menuCategoriesList',
+      description: 'Returns paginated categories for the **Menu Item Category** dropdown on the Add Item screen.',
       parameters: paginationParams(),
-      responseSchema: 'PaginatedList',
+      responseSchema: 'PaginatedMenuCategoryList',
     }),
-    post: op('post', ['Menu'], 'Create menu category', {
+    post: op('post', ['Menu', 'Menu Planning'], 'Add menu category', {
       operationId: 'menuCategoriesCreate',
+      description: 'Creates a category from the **Menu Item Category** bottom sheet (name, slogan, photo).',
       requestBody: jsonBody('CreateMenuCategoryRequest'),
+      responseSchema: 'MenuCategory',
+      created: true,
       successDescription: 'Category created',
     }),
   },
@@ -137,15 +141,64 @@ const menuPaths = {
       parameters: [idParam()],
     }),
   },
-  '/menu/items': {
-    get: op('get', ['Menu'], 'List menu items', {
-      operationId: 'menuItemsList',
-      parameters: paginationParams(),
-      responseSchema: 'PaginatedList',
+  '/menu/subcategories': {
+    get: op('get', ['Menu', 'Menu Planning'], 'List menu subcategories (dropdown)', {
+      operationId: 'menuSubCategoriesList',
+      description: 'Returns subcategories for the **Menu Item Sub Category** dropdown. Filter by `categoryId` when a category is selected.',
+      parameters: [
+        ...paginationParams(),
+        {
+          name: 'categoryId',
+          in: 'query',
+          description: 'Filter subcategories by parent category (numeric ID or UUID)',
+          schema: { oneOf: [{ type: 'integer' }, { type: 'string', format: 'uuid' }] },
+          example: 1,
+        },
+      ],
+      responseSchema: 'PaginatedMenuSubCategoryList',
     }),
-    post: op('post', ['Menu'], 'Create menu item', {
+    post: op('post', ['Menu', 'Menu Planning'], 'Add menu subcategory', {
+      operationId: 'menuSubCategoriesCreate',
+      description: 'Creates a subcategory from the **Menu Sub Item Category** bottom sheet.',
+      requestBody: jsonBody('CreateMenuSubCategoryRequest'),
+      responseSchema: 'MenuSubCategory',
+      created: true,
+      successDescription: 'Subcategory created',
+    }),
+  },
+  '/menu/subcategories/{id}': {
+    get: op('get', ['Menu'], 'Get subcategory by ID', {
+      operationId: 'menuSubCategoriesGetById',
+      parameters: [idParam()],
+      responseSchema: 'MenuSubCategory',
+    }),
+    patch: op('patch', ['Menu'], 'Update subcategory', {
+      operationId: 'menuSubCategoriesUpdate',
+      parameters: [idParam()],
+      requestBody: jsonBody('CreateMenuSubCategoryRequest'),
+    }),
+    delete: op('delete', ['Menu'], 'Delete subcategory', {
+      operationId: 'menuSubCategoriesDelete',
+      parameters: [idParam()],
+    }),
+  },
+  '/menu/items': {
+    get: op('get', ['Menu', 'Menu Planning'], 'List menu items', {
+      operationId: 'menuItemsList',
+      description: 'List menu items. Supports `categoryId` and `subcategoryId` filters.',
+      parameters: [
+        ...paginationParams(),
+        { name: 'categoryId', in: 'query', schema: { type: 'integer' }, description: 'Filter by category' },
+        { name: 'subcategoryId', in: 'query', schema: { type: 'integer' }, description: 'Filter by subcategory' },
+      ],
+      responseSchema: 'PaginatedMenuItemList',
+    }),
+    post: op('post', ['Menu', 'Menu Planning'], 'Add menu item', {
       operationId: 'menuItemsCreate',
+      description: 'Creates a menu item from the **Add new item** screen. Upload photo first via `POST /uploads/images`.',
       requestBody: jsonBody('CreateMenuItemRequest'),
+      responseSchema: 'MenuItem',
+      created: true,
       successDescription: 'Item created',
     }),
   },

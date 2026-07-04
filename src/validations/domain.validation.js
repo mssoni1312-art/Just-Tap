@@ -82,15 +82,44 @@ const bulkUpdateStaffSchema = bulkIdsSchema.keys({
 });
 
 const createCategorySchema = Joi.object({
-  name: Joi.string().required(),
+  name: Joi.string(),
+  name_english: Joi.string(),
   description: Joi.string().allow(null, ''),
+  slogan: Joi.string().allow(null, ''),
+  image_url: Joi.string().uri().allow(null, ''),
   sort_order: Joi.number().integer().min(0),
-});
+}).or('name', 'name_english');
 
 const updateCategorySchema = Joi.object({
   name: Joi.string(),
+  name_english: Joi.string(),
   description: Joi.string().allow(null, ''),
+  slogan: Joi.string().allow(null, ''),
+  image_url: Joi.string().uri().allow(null, ''),
   sort_order: Joi.number().integer().min(0),
+});
+
+const createSubCategorySchema = Joi.object({
+  category_id: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid()).required(),
+  name: Joi.string(),
+  name_english: Joi.string(),
+  sort_order: Joi.number().integer().min(0),
+}).or('name', 'name_english');
+
+const updateSubCategorySchema = Joi.object({
+  category_id: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid()),
+  name: Joi.string(),
+  name_english: Joi.string(),
+  sort_order: Joi.number().integer().min(0),
+});
+
+const listSubCategoriesSchema = Joi.object({
+  page: Joi.number().integer().min(1),
+  limit: Joi.number().integer().min(1).max(100),
+  sortBy: Joi.string(),
+  sortOrder: Joi.string().valid('asc', 'desc'),
+  search: Joi.string().allow(''),
+  categoryId: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid()),
 });
 
 const bulkUpdateCategoriesSchema = bulkIdsSchema.keys({
@@ -99,16 +128,31 @@ const bulkUpdateCategoriesSchema = bulkIdsSchema.keys({
 
 const createItemSchema = Joi.object({
   category_id: Joi.number().integer().required(),
-  name: Joi.string().required(),
+  subcategory_id: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid()).allow(null),
+  name: Joi.string(),
+  name_english: Joi.string(),
   description: Joi.string().allow(null, ''),
-  price: Joi.number().min(0).required(),
+  slogan: Joi.string().allow(null, ''),
+  price: Joi.number().min(0).default(0),
+  is_veg: Joi.boolean(),
+  image_url: Joi.string().uri().allow(null, ''),
+  is_best_seller: Joi.boolean(),
+  is_active: Joi.boolean(),
+}).or('name', 'name_english');
+
+const updateItemSchema = Joi.object({
+  category_id: Joi.number().integer(),
+  subcategory_id: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid()).allow(null),
+  name: Joi.string(),
+  name_english: Joi.string(),
+  description: Joi.string().allow(null, ''),
+  slogan: Joi.string().allow(null, ''),
+  price: Joi.number().min(0),
   is_veg: Joi.boolean(),
   image_url: Joi.string().uri().allow(null, ''),
   is_best_seller: Joi.boolean(),
   is_active: Joi.boolean(),
 });
-
-const updateItemSchema = createItemSchema.fork(['category_id', 'name', 'price'], (s) => s.optional());
 
 const bulkUpdateItemsSchema = bulkIdsSchema.keys({
   isActive: Joi.boolean(),
@@ -285,6 +329,9 @@ module.exports = {
   bulkUpdateStaffSchema,
   createCategorySchema,
   updateCategorySchema,
+  createSubCategorySchema,
+  updateSubCategorySchema,
+  listSubCategoriesSchema,
   bulkUpdateCategoriesSchema,
   createItemSchema,
   updateItemSchema,
