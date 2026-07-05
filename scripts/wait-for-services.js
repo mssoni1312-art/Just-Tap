@@ -52,8 +52,10 @@ async function main() {
 
   console.log('Waiting for dependent services...');
   await waitForPort(dbHost, dbPort, 'MySQL');
-  if (process.env.SKIP_REDIS !== 'true') {
+  if (process.env.SKIP_REDIS !== 'true' && process.env.REDIS_URL) {
     await waitForPort(redis.host, redis.port, 'Redis');
+  } else if (process.env.SKIP_REDIS === 'true' || !process.env.REDIS_URL) {
+    console.log('  ⊘ Redis wait skipped (optional dependency)');
   }
   console.log('All services are reachable.');
 }

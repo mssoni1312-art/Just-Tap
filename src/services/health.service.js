@@ -40,7 +40,7 @@ async function getReadiness() {
     checks.redis = { status: 'down', error: err.message };
   }
 
-  const ready = checks.database.status === 'up' && checks.redis.status === 'up';
+  const ready = checks.database.status === 'up';
 
   return {
     status: ready ? 'ready' : 'not_ready',

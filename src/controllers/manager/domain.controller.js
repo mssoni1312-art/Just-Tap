@@ -52,6 +52,15 @@ module.exports = {
         res,
         await managerReportService.getById(req.managerStaffId, req.params.id, req.user.id)
       ),
+    getByEventId: async (req, res) =>
+      sendSuccess(
+        res,
+        await managerReportService.getByEventId(
+          req.managerStaffId,
+          req.params.eventId,
+          req.user.id,
+        ),
+      ),
     uploadPhoto: async (req, res) =>
       sendSuccess(
         res,

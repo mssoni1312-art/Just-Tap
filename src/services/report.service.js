@@ -105,6 +105,16 @@ const reportService = {
     return report;
   },
 
+  async getByEventId(eventIdOrUuid, userId) {
+    const eventId = await resolveId('events', eventIdOrUuid);
+    const existingReportId = await reportRepository.findByEventId(eventId);
+    if (!existingReportId) throw new AppError('Report not found', 404);
+    await assertReportAccess(existingReportId, userId);
+    const report = await reportRepository.findById(existingReportId);
+    if (!report) throw new AppError('Report not found', 404);
+    return report;
+  },
+
   async deletePhoto(photoId, userId) {
     const numericPhotoId = Number(photoId);
     if (!Number.isInteger(numericPhotoId) || numericPhotoId <= 0) {

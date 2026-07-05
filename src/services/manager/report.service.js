@@ -28,6 +28,12 @@ const managerReportService = {
     return reportService.getById(reportIdOrUuid, userId);
   },
 
+  async getByEventId(staffId, eventIdOrUuid, userId) {
+    const eventId = await resolveId('events', eventIdOrUuid);
+    await assertManagerOwnsEvent(staffId, eventId);
+    return reportService.getByEventId(eventIdOrUuid, userId);
+  },
+
   uploadPhoto: async (staffId, reportId, file, userId, body) => {
     await assertManagerOwnsReportEvent(staffId, reportId);
     return reportService.uploadPhoto(reportId, file, userId, body);

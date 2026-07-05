@@ -11,10 +11,7 @@ async function start() {
     try {
       await connectRedis();
     } catch (err) {
-      if (process.env.NODE_ENV === 'production') {
-        throw err;
-      }
-      logger.warn('Redis not available — continuing in development mode', { error: err.message });
+      logger.warn('Redis not available — continuing without Redis', { error: err.message });
     }
   }
 

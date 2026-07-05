@@ -16,6 +16,8 @@ module.exports = {
     );
   },
   getById: async (req, res) => sendSuccess(res, await reportService.getById(req.params.id, req.user.id)),
+  getByEventId: async (req, res) =>
+    sendSuccess(res, await reportService.getByEventId(req.params.eventId, req.user.id)),
   uploadPhoto: async (req, res) =>
     sendSuccess(
       res,

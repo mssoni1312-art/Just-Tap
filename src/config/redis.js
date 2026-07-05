@@ -11,7 +11,12 @@ async function connectRedis() {
   if (connecting) return connecting;
 
   connecting = (async () => {
-    const redis = createClient({ url: getRedisUrl() });
+    const redis = createClient({
+      url: getRedisUrl(),
+      socket: {
+        connectTimeout: Number(process.env.REDIS_CONNECT_TIMEOUT_MS) || 5000,
+      },
+    });
 
     redis.on('error', (err) => {
       logger.error('Redis client error', { error: err.message });

@@ -21,6 +21,7 @@ const {
   generatePdfSchema,
   reportIdParamSchema,
   photoIdParamSchema,
+  eventIdParamSchema,
 } = require('../../validations/report.validation');
 const { idParamSchema } = require('../../validations/common.validation');
 
@@ -48,6 +49,7 @@ router.post('/share', validate(shareReportSchema), asyncHandler(domain.report.sh
 router.post('/generate-pdf', validate(generatePdfSchema), asyncHandler(domain.report.generatePdf));
 router.get('/pdf/:reportId/download', validate(reportIdParamSchema, 'params'), asyncHandler(domain.report.downloadPdf));
 router.delete('/pdf/:reportId', validate(reportIdParamSchema, 'params'), asyncHandler(domain.report.deletePdf));
+router.get('/event/:eventId', validate(eventIdParamSchema, 'params'), asyncHandler(domain.report.getByEventId));
 router.get('/:id', validate(idParamSchema, 'params'), asyncHandler(domain.report.getById));
 
 module.exports = router;
