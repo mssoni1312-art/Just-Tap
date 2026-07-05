@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Just Tap Super Admin Mobile API",
+    "title": "Just Tap API (Combined)",
     "version": "1.0.0",
-    "description": "REST API for the **Just Tap Mobile Super Admin** application (Figma Frame 1261155661).\n\n## Authentication\n1. Call `POST /auth/login` with email/phone and password.\n2. Copy the `accessToken` from the response.\n3. Add header on all protected routes: `Authorization: Bearer <accessToken>`.\n4. Refresh expired tokens via `POST /auth/token/refresh`.\n\n## Response format\nAll endpoints return JSON: `{ success, message, data }` on success or `{ success, message, errors }` on failure.\n\n## Validation\nRequest bodies and query params are validated with Joi. Validation errors return HTTP **422** with an `errors` array.\n\n## Pagination\nList endpoints accept `page`, `limit`, `search`, `sortBy`, `sortOrder` plus domain-specific filters.\n\n## Menu Planning Flow\nUse these endpoints from the **Add Item** screen (categories/subcategories dropdowns + inline create):\n\n1. **Upload photo** — `POST /uploads/images` (multipart `file`), then use returned `url` as `image_url`.\n2. **Add Category** — `POST /menu/categories` with `name_english`, `slogan`, `image_url`.\n3. **Add Sub Category** — `POST /menu/subcategories` with `category_id`, `name_english`.\n4. **Add Item** — `POST /menu/items` with `name_english`, `slogan`, `category_id`, `subcategory_id`, `image_url`.\n\nDropdowns: `GET /menu/categories?limit=100` and `GET /menu/subcategories?categoryId={id}&limit=100`.",
+    "description": "Combined OpenAPI spec. Use `/api/docs` for Admin or `/api/manager/docs` for Manager.",
     "contact": {
       "name": "Just Tap API Support",
       "email": "admin@justtap.com"
@@ -15,11 +15,19 @@
   "servers": [
     {
       "url": "/api/v1",
-      "description": "API v1 (relative to host)"
+      "description": "Super Admin API v1 (relative to host)"
     },
     {
       "url": "http://localhost:3000/api/v1",
-      "description": "Local development"
+      "description": "Super Admin local development"
+    },
+    {
+      "url": "/api/manager",
+      "description": "Manager API (relative to host)"
+    },
+    {
+      "url": "http://localhost:3000/api/manager",
+      "description": "Manager local development"
     }
   ],
   "tags": [
@@ -65,7 +73,11 @@
     },
     {
       "name": "Managers",
-      "description": "Event manager list for assignment dropdowns"
+      "description": "Event manager allocation — create managers and list for team assignment dropdowns"
+    },
+    {
+      "name": "Team Allocation",
+      "description": "Team allocation boards and manager report (assigned tables, tasks, timeline)"
     },
     {
       "name": "Clients",
@@ -78,6 +90,10 @@
     {
       "name": "Feedback",
       "description": "Guest feedback reply and flagging"
+    },
+    {
+      "name": "Feedback Questionnaire",
+      "description": "Dynamic feedback questions for admin and guest apps"
     },
     {
       "name": "Orders",
@@ -106,6 +122,54 @@
     {
       "name": "Report Builder",
       "description": "Menu report designer — templates, theme, typography, and client sharing"
+    },
+    {
+      "name": "Manager",
+      "description": "Just Tap Manager mobile app — scoped to allocated events"
+    },
+    {
+      "name": "Manager Auth",
+      "description": "Manager login, logout, OTP, password management"
+    },
+    {
+      "name": "Manager Dashboard",
+      "description": "Manager home screen aggregated data"
+    },
+    {
+      "name": "Manager Events",
+      "description": "Event CRUD, calendar, functions — manager-scoped"
+    },
+    {
+      "name": "Manager Tables",
+      "description": "Dining and captain table assignments for manager events"
+    },
+    {
+      "name": "Manager Orders",
+      "description": "Live order summary, tables, line items, and reports for manager events"
+    },
+    {
+      "name": "Manager Menu",
+      "description": "Menu categories, items, packages, planning"
+    },
+    {
+      "name": "Manager Tasks",
+      "description": "Event task management"
+    },
+    {
+      "name": "Manager Feedback",
+      "description": "Customer feedback for manager events"
+    },
+    {
+      "name": "Manager Uploads",
+      "description": "Image and document uploads"
+    },
+    {
+      "name": "Manager Profile",
+      "description": "Manager profile and preferences"
+    },
+    {
+      "name": "Manager Report",
+      "description": "Menu report designer — templates, theme, photos, PDF — manager-scoped"
     }
   ],
   "paths": {
@@ -198,11 +262,12 @@
     "/auth/login": {
       "post": {
         "tags": [
-          "Auth"
+          "Manager",
+          "Manager Auth"
         ],
-        "summary": "Login with email or phone",
-        "description": "Authenticate with identifier (email/phone) and password. Returns JWT access and refresh tokens.",
-        "operationId": "authLogin",
+        "summary": "Manager login",
+        "description": "",
+        "operationId": "managerAuthLogin",
         "security": [],
         "parameters": [],
         "requestBody": {
@@ -211,17 +276,13 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/LoginRequest"
-              },
-              "example": {
-                "identifier": "admin@justtap.com",
-                "password": "admin123"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Login successful — use `accessToken` in Authorization header",
+            "description": "Manager login successful",
             "content": {
               "application/json": {
                 "schema": {
@@ -271,11 +332,12 @@
     "/auth/logout": {
       "post": {
         "tags": [
-          "Auth"
+          "Manager",
+          "Manager Auth"
         ],
-        "summary": "Logout and revoke refresh token",
+        "summary": "Manager logout",
         "description": "",
-        "operationId": "authLogout",
+        "operationId": "managerAuthLogout",
         "security": [
           {
             "bearerAuth": []
@@ -294,7 +356,7 @@
         },
         "responses": {
           "200": {
-            "description": "Logged out successfully",
+            "description": "Operation successful",
             "content": {
               "application/json": {
                 "schema": {
@@ -333,11 +395,12 @@
     "/auth/token/refresh": {
       "post": {
         "tags": [
-          "Auth"
+          "Manager",
+          "Manager Auth"
         ],
-        "summary": "Refresh access token",
+        "summary": "Refresh manager access token",
         "description": "",
-        "operationId": "authRefresh",
+        "operationId": "managerAuthRefresh",
         "security": [],
         "parameters": [],
         "requestBody": {
@@ -352,7 +415,7 @@
         },
         "responses": {
           "200": {
-            "description": "New access token issued",
+            "description": "Operation successful",
             "content": {
               "application/json": {
                 "schema": {
@@ -536,11 +599,12 @@
     "/auth/password/forgot": {
       "post": {
         "tags": [
-          "Auth"
+          "Manager",
+          "Manager Auth"
         ],
-        "summary": "Request password reset",
+        "summary": "Forgot password",
         "description": "",
-        "operationId": "authForgotPassword",
+        "operationId": "managerForgotPassword",
         "security": [],
         "parameters": [],
         "requestBody": {
@@ -555,7 +619,7 @@
         },
         "responses": {
           "200": {
-            "description": "Reset link/token sent if account exists",
+            "description": "Operation successful",
             "content": {
               "application/json": {
                 "schema": {
@@ -594,11 +658,12 @@
     "/auth/password/reset": {
       "post": {
         "tags": [
-          "Auth"
+          "Manager",
+          "Manager Auth"
         ],
-        "summary": "Reset password with token",
+        "summary": "Reset password",
         "description": "",
-        "operationId": "authResetPassword",
+        "operationId": "managerResetPassword",
         "security": [],
         "parameters": [],
         "requestBody": {
@@ -613,7 +678,7 @@
         },
         "responses": {
           "200": {
-            "description": "Password reset successful",
+            "description": "Operation successful",
             "content": {
               "application/json": {
                 "schema": {
@@ -714,11 +779,12 @@
     "/auth/me": {
       "get": {
         "tags": [
-          "Auth"
+          "Manager",
+          "Manager Auth"
         ],
-        "summary": "Get current authenticated user",
+        "summary": "Get current manager profile",
         "description": "",
-        "operationId": "authGetMe",
+        "operationId": "managerAuthMe",
         "security": [
           {
             "bearerAuth": []
@@ -727,7 +793,7 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Current user profile",
+            "description": "Operation successful",
             "content": {
               "application/json": {
                 "schema": {
@@ -777,11 +843,12 @@
     "/me": {
       "get": {
         "tags": [
-          "Profile"
+          "Manager",
+          "Manager Profile"
         ],
-        "summary": "Get profile",
+        "summary": "Get manager profile",
         "description": "",
-        "operationId": "profileGet",
+        "operationId": "managerProfileGet",
         "security": [
           {
             "bearerAuth": []
@@ -794,18 +861,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/SuccessResponse"
-                    },
-                    {
-                      "properties": {
-                        "data": {
-                          "$ref": "#/components/schemas/User"
-                        }
-                      }
-                    }
-                  ]
+                  "$ref": "#/components/schemas/SuccessResponse"
                 }
               }
             }
@@ -838,11 +894,12 @@
       },
       "patch": {
         "tags": [
-          "Profile"
+          "Manager",
+          "Manager Profile"
         ],
-        "summary": "Update profile",
+        "summary": "Update manager profile",
         "description": "",
-        "operationId": "profileUpdate",
+        "operationId": "managerProfileUpdate",
         "security": [
           {
             "bearerAuth": []
@@ -855,10 +912,6 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/UpdateProfileRequest"
-              },
-              "example": {
-                "firstName": "Admin",
-                "lastName": "User"
               }
             }
           }
@@ -869,18 +922,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/SuccessResponse"
-                    },
-                    {
-                      "properties": {
-                        "data": {
-                          "$ref": "#/components/schemas/User"
-                        }
-                      }
-                    }
-                  ]
+                  "$ref": "#/components/schemas/SuccessResponse"
                 }
               }
             }
@@ -1036,11 +1078,12 @@
     "/dashboard/home": {
       "get": {
         "tags": [
-          "Dashboard"
+          "Manager",
+          "Manager Dashboard"
         ],
-        "summary": "Home screen dashboard data",
-        "description": "Aggregated stats: today events, pending inquiries, task summary, recent activity.",
-        "operationId": "dashboardHome",
+        "summary": "Manager dashboard home stats",
+        "description": "",
+        "operationId": "managerDashboardHome",
         "security": [
           {
             "bearerAuth": []
@@ -1049,7 +1092,7 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Dashboard home data",
+            "description": "Scoped stats for allocated events only",
             "content": {
               "application/json": {
                 "schema": {
@@ -1140,11 +1183,12 @@
     "/events/calendar": {
       "get": {
         "tags": [
-          "Events"
+          "Manager",
+          "Manager Events"
         ],
-        "summary": "Calendar view by month",
+        "summary": "Calendar (month/week/day)",
         "description": "",
-        "operationId": "eventsCalendar",
+        "operationId": "managerEventsCalendar",
         "security": [
           {
             "bearerAuth": []
@@ -1155,8 +1199,7 @@
             "name": "year",
             "in": "query",
             "schema": {
-              "type": "integer",
-              "example": 2026
+              "type": "integer"
             }
           },
           {
@@ -1165,8 +1208,23 @@
             "schema": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 12,
-              "example": 8
+              "maximum": 12
+            }
+          },
+          {
+            "name": "weekStart",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
             }
           }
         ],
@@ -1211,11 +1269,12 @@
     "/events/today": {
       "get": {
         "tags": [
-          "Events"
+          "Manager",
+          "Manager Events"
         ],
         "summary": "Today's events",
         "description": "",
-        "operationId": "eventsToday",
+        "operationId": "managerEventsToday",
         "security": [
           {
             "bearerAuth": []
@@ -1263,11 +1322,12 @@
     "/events/upcoming": {
       "get": {
         "tags": [
-          "Events"
+          "Manager",
+          "Manager Events"
         ],
         "summary": "Upcoming events",
         "description": "",
-        "operationId": "eventsUpcoming",
+        "operationId": "managerEventsUpcoming",
         "security": [
           {
             "bearerAuth": []
@@ -1443,11 +1503,12 @@
     "/events": {
       "get": {
         "tags": [
-          "Events"
+          "Manager",
+          "Manager Events"
         ],
-        "summary": "List events",
+        "summary": "List manager events",
         "description": "",
-        "operationId": "eventsList",
+        "operationId": "managerEventsList",
         "security": [
           {
             "bearerAuth": []
@@ -1507,7 +1568,7 @@
             "name": "status",
             "in": "query",
             "schema": {
-              "$ref": "#/components/schemas/EventStatus"
+              "type": "string"
             }
           },
           {
@@ -1533,18 +1594,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/SuccessResponse"
-                    },
-                    {
-                      "properties": {
-                        "data": {
-                          "$ref": "#/components/schemas/PaginatedList"
-                        }
-                      }
-                    }
-                  ]
+                  "$ref": "#/components/schemas/SuccessResponse"
                 }
               }
             }
@@ -1577,11 +1627,12 @@
       },
       "post": {
         "tags": [
-          "Events"
+          "Manager",
+          "Manager Events"
         ],
-        "summary": "Create event",
+        "summary": "Create event (auto-assigns manager)",
         "description": "",
-        "operationId": "eventsCreate",
+        "operationId": "managerEventsCreate",
         "security": [
           {
             "bearerAuth": []
@@ -1593,14 +1644,14 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateEventRequest"
+                "$ref": "#/components/schemas/CreateManagerEventRequest"
               }
             }
           }
         },
         "responses": {
           "201": {
-            "description": "Event created",
+            "description": "Operation successful",
             "content": {
               "application/json": {
                 "schema": {
@@ -1775,11 +1826,12 @@
     "/events/{id}": {
       "get": {
         "tags": [
-          "Events"
+          "Manager",
+          "Manager Events"
         ],
-        "summary": "Get event by ID",
+        "summary": "Event details",
         "description": "",
-        "operationId": "eventsGetById",
+        "operationId": "managerEventsGetById",
         "security": [
           {
             "bearerAuth": []
@@ -1803,18 +1855,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/SuccessResponse"
-                    },
-                    {
-                      "properties": {
-                        "data": {
-                          "$ref": "#/components/schemas/EventDetail"
-                        }
-                      }
-                    }
-                  ]
+                  "$ref": "#/components/schemas/SuccessResponse"
                 }
               }
             }
@@ -1847,11 +1888,12 @@
       },
       "patch": {
         "tags": [
-          "Events"
+          "Manager",
+          "Manager Events"
         ],
         "summary": "Update event",
         "description": "",
-        "operationId": "eventsUpdate",
+        "operationId": "managerEventsUpdate",
         "security": [
           {
             "bearerAuth": []
@@ -1874,7 +1916,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateEventRequest"
+                "$ref": "#/components/schemas/CreateManagerEventRequest"
               }
             }
           }
@@ -1918,11 +1960,12 @@
       },
       "delete": {
         "tags": [
-          "Events"
+          "Manager",
+          "Manager Events"
         ],
-        "summary": "Soft-delete event",
+        "summary": "Delete event",
         "description": "",
-        "operationId": "eventsDelete",
+        "operationId": "managerEventsDelete",
         "security": [
           {
             "bearerAuth": []
@@ -1942,7 +1985,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Event deleted",
+            "description": "Operation successful",
             "content": {
               "application/json": {
                 "schema": {
@@ -2557,12 +2600,12 @@
     "/events/{eventId}/tables": {
       "get": {
         "tags": [
-          "Events",
-          "Tables"
+          "Manager",
+          "Manager Tables"
         ],
-        "summary": "Get table assignments",
-        "description": "",
-        "operationId": "eventTablesGet",
+        "summary": "Get assign table list for manager event",
+        "description": "Returns dining and captain table assignments for an event allocated to the authenticated manager. The manager staff ID is resolved from the bearer token (`req.managerStaffId`); the event must be assigned to that manager via `assigned_manager_id` or `event_manager_allocations`.",
+        "operationId": "managerEventTablesGet",
         "security": [
           {
             "bearerAuth": []
@@ -2581,78 +2624,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Operation successful",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "409": {
-            "$ref": "#/components/responses/Conflict"
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationError"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "Events",
-          "Tables"
-        ],
-        "summary": "Bulk save table assignments",
-        "description": "",
-        "operationId": "eventTablesBulkSave",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "eventId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/IdParam"
-            },
-            "description": "Event ID (numeric or UUID)"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BulkTablesRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Operation successful",
+            "description": "Table assignment list for the event",
             "content": {
               "application/json": {
                 "schema": {
@@ -2739,6 +2711,185 @@
         "responses": {
           "200": {
             "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/events/{eventId}/tables/{tableNumber}/assign-manager": {
+      "post": {
+        "tags": [
+          "Events",
+          "Tables"
+        ],
+        "summary": "Assign manager to a table",
+        "description": "Assigns a single event manager to the selected table — powers the **Assign Access** dialog on the Assign Tables screen. Use `allocationType: dining` for Table View and `captain` for Captain View. The manager must be allocated to the event.",
+        "operationId": "eventTableAssignManager",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Event ID (numeric or UUID)"
+          },
+          {
+            "name": "tableNumber",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 4
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignTableManagerRequest"
+              },
+              "example": {
+                "staffId": 3,
+                "allocationType": "dining"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Manager assigned to table",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/TableAssignment"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/events/{eventId}/tables/assign-manager": {
+      "post": {
+        "tags": [
+          "Events",
+          "Tables"
+        ],
+        "summary": "Assign tables to a manager (bulk)",
+        "description": "Bulk-assigns one or more table numbers to a manager (staff) for an event. Prefer `POST /events/{eventId}/tables/{tableNumber}/assign-manager` for the single-table Assign Access dialog. Assigned tables appear in the Manager Report `assignedTables` list.",
+        "operationId": "eventTablesAssignManager",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Event ID (numeric or UUID)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignManagerTablesRequest"
+              },
+              "example": {
+                "staffId": 3,
+                "tableNumbers": [
+                  1,
+                  2,
+                  3
+                ],
+                "allocationType": "dining"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tables assigned to manager",
             "content": {
               "application/json": {
                 "schema": {
@@ -2861,12 +3012,12 @@
     "/events/{eventId}/orders/summary": {
       "get": {
         "tags": [
-          "Events",
-          "Orders"
+          "Manager",
+          "Manager Orders"
         ],
-        "summary": "Order summary for event",
-        "description": "",
-        "operationId": "eventOrdersSummary",
+        "summary": "Order summary for manager event",
+        "description": "Order stats for an event. Enforces manager event ownership via `assertManagerOwnsEvent`.",
+        "operationId": "managerEventOrdersSummary",
         "security": [
           {
             "bearerAuth": []
@@ -2924,12 +3075,12 @@
     "/events/{eventId}/orders/tables": {
       "get": {
         "tags": [
-          "Events",
-          "Orders"
+          "Manager",
+          "Manager Orders"
         ],
         "summary": "Orders grouped by table",
-        "description": "",
-        "operationId": "eventOrdersTables",
+        "description": "Table list with waiter assignments. Enforces manager event ownership via `assertManagerOwnsEvent`.",
+        "operationId": "managerEventOrdersTables",
         "security": [
           {
             "bearerAuth": []
@@ -2987,12 +3138,12 @@
     "/events/{eventId}/orders/tables/{tableNumber}": {
       "get": {
         "tags": [
-          "Events",
-          "Orders"
+          "Manager",
+          "Manager Orders"
         ],
         "summary": "Order detail for a table",
-        "description": "",
-        "operationId": "eventOrdersTableDetail",
+        "description": "Line items for a single table. Enforces manager event ownership via `assertManagerOwnsEvent`.",
+        "operationId": "managerEventOrdersTableDetail",
         "security": [
           {
             "bearerAuth": []
@@ -3065,12 +3216,12 @@
     "/events/{eventId}/orders/report": {
       "get": {
         "tags": [
-          "Events",
-          "Orders"
+          "Manager",
+          "Manager Orders"
         ],
         "summary": "Export order report",
-        "description": "",
-        "operationId": "eventOrdersReport",
+        "description": "Download order report (JSON or CSV). Enforces manager event ownership via `assertManagerOwnsEvent`.",
+        "operationId": "managerEventOrdersReport",
         "security": [
           {
             "bearerAuth": []
@@ -3430,6 +3581,129 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/events/{eventId}/feedback-questionnaire/submissions": {
+      "get": {
+        "tags": [
+          "Events",
+          "Feedback Questionnaire"
+        ],
+        "summary": "List questionnaire submissions for event",
+        "description": "",
+        "operationId": "eventFeedbackQuestionnaireSubmissions",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Event ID (numeric or UUID)"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 20
+            },
+            "description": "Items per page"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Full-text search term"
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Sort column"
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/PaginatedList"
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -4590,12 +4864,12 @@
     "/menu/categories": {
       "get": {
         "tags": [
-          "Menu",
-          "Menu Planning"
+          "Manager",
+          "Manager Menu"
         ],
-        "summary": "List menu categories (dropdown)",
-        "description": "Returns paginated categories for the **Menu Item Category** dropdown on the Add Item screen.",
-        "operationId": "menuCategoriesList",
+        "summary": "List categories",
+        "description": "",
+        "operationId": "managerMenuCategoriesList",
         "security": [
           {
             "bearerAuth": []
@@ -4702,12 +4976,12 @@
       },
       "post": {
         "tags": [
-          "Menu",
-          "Menu Planning"
+          "Manager",
+          "Manager Menu"
         ],
-        "summary": "Add menu category",
-        "description": "Creates a category from the **Menu Item Category** bottom sheet (name, slogan, photo).",
-        "operationId": "menuCategoriesCreate",
+        "summary": "Create category",
+        "description": "",
+        "operationId": "managerMenuCategoriesCreate",
         "security": [
           {
             "bearerAuth": []
@@ -4726,7 +5000,7 @@
         },
         "responses": {
           "201": {
-            "description": "Category created",
+            "description": "Operation successful",
             "content": {
               "application/json": {
                 "schema": {
@@ -5127,11 +5401,12 @@
     "/menu/categories/{id}": {
       "get": {
         "tags": [
-          "Menu"
+          "Manager",
+          "Manager Menu"
         ],
         "summary": "Get category by ID",
         "description": "",
-        "operationId": "menuCategoriesGetById",
+        "operationId": "managerMenuCategoriesGetById",
         "security": [
           {
             "bearerAuth": []
@@ -5199,11 +5474,12 @@
       },
       "patch": {
         "tags": [
-          "Menu"
+          "Manager",
+          "Manager Menu"
         ],
         "summary": "Update category",
         "description": "",
-        "operationId": "menuCategoriesUpdate",
+        "operationId": "managerMenuCategoriesUpdate",
         "security": [
           {
             "bearerAuth": []
@@ -5237,7 +5513,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SuccessResponse"
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/MenuCategory"
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -5270,11 +5557,12 @@
       },
       "delete": {
         "tags": [
-          "Menu"
+          "Manager",
+          "Manager Menu"
         ],
         "summary": "Delete category",
         "description": "",
-        "operationId": "menuCategoriesDelete",
+        "operationId": "managerMenuCategoriesDelete",
         "security": [
           {
             "bearerAuth": []
@@ -5742,12 +6030,12 @@
     "/menu/items": {
       "get": {
         "tags": [
-          "Menu",
-          "Menu Planning"
+          "Manager",
+          "Manager Menu"
         ],
         "summary": "List menu items",
-        "description": "List menu items. Supports `categoryId` and `subcategoryId` filters.",
-        "operationId": "menuItemsList",
+        "description": "",
+        "operationId": "managerMenuItemsList",
         "security": [
           {
             "bearerAuth": []
@@ -5802,22 +6090,6 @@
               ],
               "default": "desc"
             }
-          },
-          {
-            "name": "categoryId",
-            "in": "query",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "Filter by category"
-          },
-          {
-            "name": "subcategoryId",
-            "in": "query",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "Filter by subcategory"
           }
         ],
         "responses": {
@@ -5870,12 +6142,12 @@
       },
       "post": {
         "tags": [
-          "Menu",
-          "Menu Planning"
+          "Manager",
+          "Manager Menu"
         ],
-        "summary": "Add menu item",
-        "description": "Creates a menu item from the **Add new item** screen. Upload photo first via `POST /uploads/images`.",
-        "operationId": "menuItemsCreate",
+        "summary": "Create menu item",
+        "description": "",
+        "operationId": "managerMenuItemsCreate",
         "security": [
           {
             "bearerAuth": []
@@ -5894,7 +6166,7 @@
         },
         "responses": {
           "201": {
-            "description": "Item created",
+            "description": "Operation successful",
             "content": {
               "application/json": {
                 "schema": {
@@ -6294,11 +6566,12 @@
     "/menu/items/{id}": {
       "get": {
         "tags": [
-          "Menu"
+          "Manager",
+          "Manager Menu"
         ],
         "summary": "Get menu item by ID",
         "description": "",
-        "operationId": "menuItemsGetById",
+        "operationId": "managerMenuItemsGetById",
         "security": [
           {
             "bearerAuth": []
@@ -6366,11 +6639,12 @@
       },
       "patch": {
         "tags": [
-          "Menu"
+          "Manager",
+          "Manager Menu"
         ],
         "summary": "Update menu item",
         "description": "",
-        "operationId": "menuItemsUpdate",
+        "operationId": "managerMenuItemsUpdate",
         "security": [
           {
             "bearerAuth": []
@@ -6404,7 +6678,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SuccessResponse"
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/MenuItem"
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -6437,11 +6722,12 @@
       },
       "delete": {
         "tags": [
-          "Menu"
+          "Manager",
+          "Manager Menu"
         ],
         "summary": "Delete menu item",
         "description": "",
-        "operationId": "menuItemsDelete",
+        "operationId": "managerMenuItemsDelete",
         "security": [
           {
             "bearerAuth": []
@@ -6500,11 +6786,12 @@
     "/menu/packages": {
       "get": {
         "tags": [
-          "Menu"
+          "Manager",
+          "Manager Menu"
         ],
-        "summary": "List menu packages",
+        "summary": "List packages",
         "description": "",
-        "operationId": "menuPackagesList",
+        "operationId": "managerMenuPackagesList",
         "security": [
           {
             "bearerAuth": []
@@ -6514,66 +6801,6 @@
         "responses": {
           "200": {
             "description": "Operation successful",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "409": {
-            "$ref": "#/components/responses/Conflict"
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationError"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Menu"
-        ],
-        "summary": "Create package tier",
-        "description": "",
-        "operationId": "menuPackagesCreate",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateManagePackageRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Package created",
             "content": {
               "application/json": {
                 "schema": {
@@ -7375,11 +7602,12 @@
     "/tasks": {
       "get": {
         "tags": [
-          "Tasks"
+          "Manager",
+          "Manager Tasks"
         ],
-        "summary": "List task templates",
+        "summary": "List event tasks across manager events",
         "description": "",
-        "operationId": "tasksList",
+        "operationId": "managerTasksList",
         "security": [
           {
             "bearerAuth": []
@@ -7436,7 +7664,7 @@
             }
           },
           {
-            "name": "category",
+            "name": "status",
             "in": "query",
             "schema": {
               "type": "string"
@@ -7449,18 +7677,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/SuccessResponse"
-                    },
-                    {
-                      "properties": {
-                        "data": {
-                          "$ref": "#/components/schemas/PaginatedList"
-                        }
-                      }
-                    }
-                  ]
+                  "$ref": "#/components/schemas/SuccessResponse"
                 }
               }
             }
@@ -7493,30 +7710,21 @@
       },
       "post": {
         "tags": [
-          "Tasks"
+          "Manager",
+          "Manager Tasks"
         ],
-        "summary": "Create task template",
+        "summary": "Create event task",
         "description": "",
-        "operationId": "tasksCreate",
+        "operationId": "managerTasksCreate",
         "security": [
           {
             "bearerAuth": []
           }
         ],
         "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTaskRequest"
-              }
-            }
-          }
-        },
         "responses": {
-          "200": {
-            "description": "Task template created",
+          "201": {
+            "description": "Operation successful",
             "content": {
               "application/json": {
                 "schema": {
@@ -7623,11 +7831,12 @@
     "/tasks/{id}": {
       "get": {
         "tags": [
-          "Tasks"
+          "Manager",
+          "Manager Tasks"
         ],
-        "summary": "Get task template by ID",
+        "summary": "Task details",
         "description": "",
-        "operationId": "tasksGetById",
+        "operationId": "managerTasksGetById",
         "security": [
           {
             "bearerAuth": []
@@ -7651,18 +7860,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/SuccessResponse"
-                    },
-                    {
-                      "properties": {
-                        "data": {
-                          "$ref": "#/components/schemas/TaskTemplate"
-                        }
-                      }
-                    }
-                  ]
+                  "$ref": "#/components/schemas/SuccessResponse"
                 }
               }
             }
@@ -7695,11 +7893,12 @@
       },
       "patch": {
         "tags": [
-          "Tasks"
+          "Manager",
+          "Manager Tasks"
         ],
-        "summary": "Update task template",
+        "summary": "Update task",
         "description": "",
-        "operationId": "tasksUpdate",
+        "operationId": "managerTasksUpdate",
         "security": [
           {
             "bearerAuth": []
@@ -7717,16 +7916,6 @@
             "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTaskRequest"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Operation successful",
@@ -7766,11 +7955,12 @@
       },
       "delete": {
         "tags": [
-          "Tasks"
+          "Manager",
+          "Manager Tasks"
         ],
-        "summary": "Delete task template",
+        "summary": "Delete task",
         "description": "",
-        "operationId": "tasksDelete",
+        "operationId": "managerTasksDelete",
         "security": [
           {
             "bearerAuth": []
@@ -7927,6 +8117,81 @@
                       "properties": {
                         "data": {
                           "$ref": "#/components/schemas/PaginatedList"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Managers"
+        ],
+        "summary": "Allocate new manager",
+        "description": "Creates a new event manager (`staff` with role `event_manager`) from the **Allocate New Member** modal. Send `memberName` and `designation`.",
+        "operationId": "managersCreate",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateManagerRequest"
+              },
+              "example": {
+                "memberName": "Julian Reed",
+                "designation": "Content Strategist"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Manager created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Staff"
                         }
                       }
                     }
@@ -9444,14 +9709,780 @@
         }
       }
     },
+    "/feedback-questions": {
+      "get": {
+        "tags": [
+          "Feedback Questionnaire"
+        ],
+        "summary": "List feedback questions",
+        "description": "List admin-managed dynamic feedback questions. Filter by eventId for event-specific questions, or scope=global for global questions.",
+        "operationId": "feedbackQuestionsList",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 20
+            },
+            "description": "Items per page"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Full-text search term"
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Sort column"
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            }
+          },
+          {
+            "name": "eventId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by event ID or UUID"
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "global"
+              ]
+            },
+            "description": "Return only global questions (no event)"
+          },
+          {
+            "name": "isActive",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/PaginatedList"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Feedback Questionnaire"
+        ],
+        "summary": "Create feedback question",
+        "description": "",
+        "operationId": "feedbackQuestionsCreate",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFeedbackQuestionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Question created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/FeedbackQuestion"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/feedback-questions/reorder": {
+      "patch": {
+        "tags": [
+          "Feedback Questionnaire"
+        ],
+        "summary": "Reorder feedback questions",
+        "description": "",
+        "operationId": "feedbackQuestionsReorder",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderFeedbackQuestionsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Questions reordered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/feedback-questions/bulk-delete": {
+      "post": {
+        "tags": [
+          "Feedback Questionnaire"
+        ],
+        "summary": "Bulk delete feedback questions",
+        "description": "",
+        "operationId": "feedbackQuestionsBulkDelete",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkIdsRequest"
+              },
+              "example": {
+                "ids": [
+                  "1",
+                  "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/feedback-questions/{id}": {
+      "get": {
+        "tags": [
+          "Feedback Questionnaire"
+        ],
+        "summary": "Get feedback question by ID",
+        "description": "",
+        "operationId": "feedbackQuestionsGetById",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Record ID (numeric or UUID)",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/FeedbackQuestion"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Feedback Questionnaire"
+        ],
+        "summary": "Update feedback question",
+        "description": "",
+        "operationId": "feedbackQuestionsUpdate",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Record ID (numeric or UUID)",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFeedbackQuestionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/FeedbackQuestion"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Feedback Questionnaire"
+        ],
+        "summary": "Delete feedback question",
+        "description": "",
+        "operationId": "feedbackQuestionsDelete",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Record ID (numeric or UUID)",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/public/feedback-questions": {
+      "get": {
+        "tags": [
+          "Feedback Questionnaire"
+        ],
+        "summary": "Get active feedback questions (public)",
+        "description": "Public endpoint for guest/consumer app. Returns active global + event-specific questions ordered by sortOrder.",
+        "operationId": "publicFeedbackQuestionsList",
+        "security": [],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Event ID or UUID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/FeedbackQuestionList"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/public/events/{eventId}/feedback-questions": {
+      "get": {
+        "tags": [
+          "Feedback Questionnaire"
+        ],
+        "summary": "Get active feedback questions for event (public)",
+        "description": "",
+        "operationId": "publicEventFeedbackQuestionsList",
+        "security": [],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Record ID (numeric or UUID)",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/FeedbackQuestionList"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/public/feedback-submissions": {
+      "post": {
+        "tags": [
+          "Feedback Questionnaire"
+        ],
+        "summary": "Submit feedback questionnaire responses (public)",
+        "description": "",
+        "operationId": "publicFeedbackSubmissionsCreate",
+        "security": [],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitFeedbackQuestionnaireRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Feedback submitted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/FeedbackSubmission"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
     "/orders/items/{lineItemId}": {
       "get": {
         "tags": [
-          "Orders"
+          "Manager",
+          "Manager Orders"
         ],
         "summary": "Get order line item detail",
-        "description": "",
-        "operationId": "ordersLineItem",
+        "description": "Item details with batch history. Resolves the parent event from the line item and enforces manager event ownership via `assertManagerOwnsEvent`.",
+        "operationId": "managerOrdersLineItem",
         "security": [
           {
             "bearerAuth": []
@@ -9866,29 +10897,28 @@
     "/uploads/images": {
       "post": {
         "tags": [
-          "Uploads"
+          "Manager",
+          "Manager Uploads"
         ],
         "summary": "Upload image",
-        "operationId": "uploadsImage",
+        "description": "",
+        "operationId": "managerUploadImage",
         "security": [
           {
             "bearerAuth": []
           }
         ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
             "multipart/form-data": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "file"
-                ],
                 "properties": {
                   "file": {
                     "type": "string",
-                    "format": "binary",
-                    "description": "JPEG, PNG, WebP, GIF"
+                    "format": "binary"
                   }
                 }
               }
@@ -9897,22 +10927,11 @@
         },
         "responses": {
           "201": {
-            "description": "Image uploaded",
+            "description": "Operation successful",
             "content": {
               "application/json": {
                 "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/SuccessResponse"
-                    },
-                    {
-                      "properties": {
-                        "data": {
-                          "$ref": "#/components/schemas/UploadResponse"
-                        }
-                      }
-                    }
-                  ]
+                  "$ref": "#/components/schemas/SuccessResponse"
                 }
               }
             }
@@ -9922,6 +10941,24 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
           }
         }
       }
@@ -9989,14 +11026,275 @@
         }
       }
     },
+    "/team-allocations/{teamType}": {
+      "get": {
+        "tags": [
+          "Team Allocation"
+        ],
+        "summary": "List team allocation board",
+        "description": "Returns event managers on the team allocation board for the given team type, including assignment pill labels per member.",
+        "operationId": "teamAllocationsGet",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "teamType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "justTap",
+                "justSocial",
+                "photoVideo"
+              ]
+            },
+            "description": "Team allocation board (`justTap`, `justSocial`, or `photoVideo`)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/TeamAllocationSummary"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/team-allocations/{teamType}/staff/{staffId}/report": {
+      "get": {
+        "tags": [
+          "Team Allocation"
+        ],
+        "summary": "Manager report (manager details screen)",
+        "description": "Returns the **Manager Report** screen payload for a manager staff member: profile, efficiency score, stats, **assignedTables** (table numbers assigned to this manager via the \"Select tables to assign\" screen), done/pending tasks, and activity timeline. Task metrics are filtered by team type.",
+        "operationId": "teamAllocationStaffReport",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "teamType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "justTap",
+                "justSocial",
+                "photoVideo"
+              ]
+            },
+            "description": "Team allocation board (`justTap`, `justSocial`, or `photoVideo`)"
+          },
+          {
+            "name": "staffId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Manager staff ID (numeric or UUID)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Manager report with assigned table list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ManagerStaffReport"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/team-allocations/{teamType}/staff/{staffId}/tasks/assign": {
+      "post": {
+        "tags": [
+          "Team Allocation"
+        ],
+        "summary": "Assign tasks to manager from allocation board",
+        "description": "",
+        "operationId": "teamAllocationAssignTasks",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "teamType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "justTap",
+                "justSocial",
+                "photoVideo"
+              ]
+            },
+            "description": "Team allocation board (`justTap`, `justSocial`, or `photoVideo`)"
+          },
+          {
+            "name": "staffId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Manager staff ID (numeric or UUID)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignTeamTasksRequest"
+              },
+              "example": {
+                "tasks": [
+                  {
+                    "title": "Just Social",
+                    "description": "Promote on Instagram",
+                    "due_date": "2026-07-10"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tasks assigned to manager for their active event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
     "/report/meta": {
       "get": {
         "tags": [
-          "Report Builder"
+          "Manager",
+          "Manager Report"
         ],
         "summary": "Report builder metadata",
         "description": "",
-        "operationId": "reportMeta",
+        "operationId": "managerReportMeta",
         "security": [
           {
             "bearerAuth": []
@@ -10055,11 +11353,12 @@
     "/report/templates": {
       "get": {
         "tags": [
-          "Report Builder"
+          "Manager",
+          "Manager Report"
         ],
         "summary": "List report templates",
         "description": "Fetch design templates from the database. Filter by category: all, luxury, minimal, classic, custom.",
-        "operationId": "reportTemplatesList",
+        "operationId": "managerReportTemplatesList",
         "security": [
           {
             "bearerAuth": []
@@ -10183,11 +11482,12 @@
     "/report/create": {
       "post": {
         "tags": [
-          "Report Builder"
+          "Manager",
+          "Manager Report"
         ],
         "summary": "Create report",
-        "description": "Create a new menu report for an event. One report per event is allowed.",
-        "operationId": "reportCreate",
+        "description": "Create a menu report for an event, or return the existing report if one already exists (one report per event).",
+        "operationId": "managerReportCreate",
         "security": [
           {
             "bearerAuth": []
@@ -10256,11 +11556,12 @@
     "/report/upload-photo": {
       "post": {
         "tags": [
-          "Report Builder"
+          "Manager",
+          "Manager Report"
         ],
         "summary": "Upload report photo",
         "description": "Upload bride/groom or decorative photo. Stores URL via existing upload service (no Base64).",
-        "operationId": "reportUploadPhoto",
+        "operationId": "managerReportUploadPhoto",
         "security": [
           {
             "bearerAuth": []
@@ -10348,14 +11649,90 @@
         }
       }
     },
+    "/report/photo/{photoId}": {
+      "delete": {
+        "tags": [
+          "Manager",
+          "Manager Report"
+        ],
+        "summary": "Delete report photo",
+        "description": "Soft-deletes a report photo. Clears `brideGroomPhotoUrl` when the deleted photo was set as the bride/groom image.",
+        "operationId": "managerReportDeletePhoto",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "photoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Report photo ID",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ReportPhotoDeleteResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
     "/report/template/select": {
       "post": {
         "tags": [
-          "Report Builder"
+          "Manager",
+          "Manager Report"
         ],
         "summary": "Select template",
         "description": "",
-        "operationId": "reportSelectTemplate",
+        "operationId": "managerReportSelectTemplate",
         "security": [
           {
             "bearerAuth": []
@@ -10424,11 +11801,12 @@
     "/report/theme": {
       "patch": {
         "tags": [
-          "Report Builder"
+          "Manager",
+          "Manager Report"
         ],
         "summary": "Update color theme",
         "description": "",
-        "operationId": "reportUpdateTheme",
+        "operationId": "managerReportUpdateTheme",
         "security": [
           {
             "bearerAuth": []
@@ -10497,11 +11875,12 @@
     "/report/typography": {
       "patch": {
         "tags": [
-          "Report Builder"
+          "Manager",
+          "Manager Report"
         ],
         "summary": "Update typography",
         "description": "",
-        "operationId": "reportUpdateTypography",
+        "operationId": "managerReportUpdateTypography",
         "security": [
           {
             "bearerAuth": []
@@ -10570,11 +11949,12 @@
     "/report/grid": {
       "patch": {
         "tags": [
-          "Report Builder"
+          "Manager",
+          "Manager Report"
         ],
         "summary": "Update grid spacing",
         "description": "",
-        "operationId": "reportUpdateGrid",
+        "operationId": "managerReportUpdateGrid",
         "security": [
           {
             "bearerAuth": []
@@ -10643,11 +12023,12 @@
     "/report/photo-filter": {
       "patch": {
         "tags": [
-          "Report Builder"
+          "Manager",
+          "Manager Report"
         ],
         "summary": "Update photo filter",
         "description": "",
-        "operationId": "reportUpdatePhotoFilter",
+        "operationId": "managerReportUpdatePhotoFilter",
         "security": [
           {
             "bearerAuth": []
@@ -10716,11 +12097,12 @@
     "/report/save-draft": {
       "post": {
         "tags": [
-          "Report Builder"
+          "Manager",
+          "Manager Report"
         ],
         "summary": "Save draft",
         "description": "",
-        "operationId": "reportSaveDraft",
+        "operationId": "managerReportSaveDraft",
         "security": [
           {
             "bearerAuth": []
@@ -10789,11 +12171,12 @@
     "/report/publish": {
       "post": {
         "tags": [
-          "Report Builder"
+          "Manager",
+          "Manager Report"
         ],
         "summary": "Publish report",
         "description": "",
-        "operationId": "reportPublish",
+        "operationId": "managerReportPublish",
         "security": [
           {
             "bearerAuth": []
@@ -10862,11 +12245,12 @@
     "/report/share": {
       "post": {
         "tags": [
-          "Report Builder"
+          "Manager",
+          "Manager Report"
         ],
         "summary": "Share report with client",
         "description": "",
-        "operationId": "reportShare",
+        "operationId": "managerReportShare",
         "security": [
           {
             "bearerAuth": []
@@ -10935,11 +12319,12 @@
     "/report/generate-pdf": {
       "post": {
         "tags": [
-          "Report Builder"
+          "Manager",
+          "Manager Report"
         ],
         "summary": "Generate premium PDF",
         "description": "Generates a print-ready A4 PDF from the report using HTML + CSS + Puppeteer. Loads report data, images, theme, typography, grid, menu sections, and Handlebars template, then stores the PDF URL.",
-        "operationId": "reportGeneratePdf",
+        "operationId": "managerReportGeneratePdf",
         "security": [
           {
             "bearerAuth": []
@@ -11008,11 +12393,12 @@
     "/report/pdf/{reportId}/download": {
       "get": {
         "tags": [
-          "Report Builder"
+          "Manager",
+          "Manager Report"
         ],
         "summary": "Download report PDF",
         "description": "Download the generated PDF file. Pass `urlOnly=true` to receive JSON with `pdfUrl` instead.",
-        "operationId": "reportDownloadPdf",
+        "operationId": "managerReportDownloadPdf",
         "security": [
           {
             "bearerAuth": []
@@ -11081,11 +12467,12 @@
     "/report/pdf/{reportId}": {
       "delete": {
         "tags": [
-          "Report Builder"
+          "Manager",
+          "Manager Report"
         ],
         "summary": "Delete report PDF",
         "description": "",
-        "operationId": "reportDeletePdf",
+        "operationId": "managerReportDeletePdf",
         "security": [
           {
             "bearerAuth": []
@@ -11155,11 +12542,12 @@
     "/report/{id}": {
       "get": {
         "tags": [
-          "Report Builder"
+          "Manager",
+          "Manager Report"
         ],
         "summary": "Get report by ID",
         "description": "",
-        "operationId": "reportGetById",
+        "operationId": "managerReportGetById",
         "security": [
           {
             "bearerAuth": []
@@ -11195,6 +12583,911 @@
                       }
                     }
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/events/completed": {
+      "get": {
+        "tags": [
+          "Manager",
+          "Manager Events"
+        ],
+        "summary": "Completed events",
+        "description": "",
+        "operationId": "managerEventsCompleted",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 20
+            },
+            "description": "Items per page"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Full-text search term"
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Sort column"
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/events/cancelled": {
+      "get": {
+        "tags": [
+          "Manager",
+          "Manager Events"
+        ],
+        "summary": "Cancelled events",
+        "description": "",
+        "operationId": "managerEventsCancelled",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 20
+            },
+            "description": "Items per page"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Full-text search term"
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Sort column"
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/events/{eventId}/all-tasks": {
+      "get": {
+        "tags": [
+          "Manager",
+          "Manager Tasks"
+        ],
+        "summary": "Get All Tasks screen payload",
+        "description": "Returns the **All Tasks** screen for an event: reporting time, follower/reel progress, videography/photography tracking, billing collection, and attachments. Targets are derived from event configuration.",
+        "operationId": "managerEventAllTasksGet",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Event ID (numeric or UUID)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ManagerAllTasksResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Manager",
+          "Manager Tasks"
+        ],
+        "summary": "Save All Tasks progress",
+        "description": "",
+        "operationId": "managerEventAllTasksUpdate",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Event ID (numeric or UUID)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateManagerAllTasksRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ManagerAllTasksResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/events/{eventId}/all-tasks/complete": {
+      "post": {
+        "tags": [
+          "Manager",
+          "Manager Tasks"
+        ],
+        "summary": "Mark All Tasks as completed",
+        "description": "",
+        "operationId": "managerEventAllTasksComplete",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Event ID (numeric or UUID)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ManagerAllTasksResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/events/{eventId}/all-tasks/abandon": {
+      "post": {
+        "tags": [
+          "Manager",
+          "Manager Tasks"
+        ],
+        "summary": "Abandon All Tasks workflow",
+        "description": "",
+        "operationId": "managerEventAllTasksAbandon",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Event ID (numeric or UUID)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ManagerAllTasksResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/events/{eventId}/all-tasks/attachments": {
+      "post": {
+        "tags": [
+          "Manager",
+          "Manager Tasks"
+        ],
+        "summary": "Upload All Tasks attachment",
+        "description": "",
+        "operationId": "managerEventAllTasksUploadAttachment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Event ID (numeric or UUID)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ManagerAllTaskAttachment"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/events/{eventId}/all-tasks/attachments/{attachmentId}": {
+      "delete": {
+        "tags": [
+          "Manager",
+          "Manager Tasks"
+        ],
+        "summary": "Delete All Tasks attachment",
+        "description": "",
+        "operationId": "managerEventAllTasksDeleteAttachment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Event ID (numeric or UUID)"
+          },
+          {
+            "name": "attachmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/tasks/{id}/complete": {
+      "post": {
+        "tags": [
+          "Manager",
+          "Manager Tasks"
+        ],
+        "summary": "Complete task",
+        "description": "",
+        "operationId": "managerTasksComplete",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Record ID (numeric or UUID)",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/feedback": {
+      "get": {
+        "tags": [
+          "Manager",
+          "Manager Feedback"
+        ],
+        "summary": "List feedback across manager events",
+        "description": "",
+        "operationId": "managerFeedbackList",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 20
+            },
+            "description": "Items per page"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Full-text search term"
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Sort column"
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/feedback/{id}": {
+      "get": {
+        "tags": [
+          "Manager",
+          "Manager Feedback"
+        ],
+        "summary": "Feedback details",
+        "description": "",
+        "operationId": "managerFeedbackGetById",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Record ID (numeric or UUID)",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
                 }
               }
             }
@@ -11614,6 +13907,10 @@
             "type": "string",
             "nullable": true
           },
+          "subVenueRemarks": {
+            "type": "string",
+            "nullable": true
+          },
           "date": {
             "type": "string",
             "format": "date",
@@ -11627,6 +13924,16 @@
             "type": "string",
             "nullable": true
           },
+          "startDateTime": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "endDateTime": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
           "pax": {
             "type": "integer",
             "nullable": true
@@ -11634,6 +13941,340 @@
           "rate": {
             "type": "number",
             "nullable": true
+          }
+        }
+      },
+      "ManagerTabletMedia": {
+        "type": "object",
+        "description": "Create Event step 2 — Tablet / Photography / Videography",
+        "properties": {
+          "service": {
+            "type": "string",
+            "example": "Just Tap Tablet"
+          },
+          "number": {
+            "type": "integer",
+            "example": 10,
+            "description": "Number of tablets"
+          },
+          "clientAddress": {
+            "type": "string",
+            "example": "Grand Hyatt Hall"
+          },
+          "hasPhotographyVideography": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "ManagerBrideGroomInformation": {
+        "type": "object",
+        "description": "Create Event step 2 — Bride and Groom Information",
+        "properties": {
+          "brideName": {
+            "type": "string"
+          },
+          "brideInstagramId": {
+            "type": "string"
+          },
+          "groomName": {
+            "type": "string"
+          },
+          "groomInstagramId": {
+            "type": "string"
+          },
+          "foodNotes": {
+            "type": "string"
+          },
+          "eventRemarks": {
+            "type": "string"
+          },
+          "venueName": {
+            "type": "string",
+            "description": "Optional venue override"
+          }
+        }
+      },
+      "CreateManagerEventRequest": {
+        "type": "object",
+        "required": [
+          "venueName",
+          "cityName",
+          "startDate",
+          "endDate"
+        ],
+        "description": "Manager mobile app create-event wizard (4 steps)",
+        "properties": {
+          "inquiryId": {
+            "$ref": "#/components/schemas/IdParam"
+          },
+          "clientId": {
+            "$ref": "#/components/schemas/IdParam",
+            "description": "Existing client from GET /clients. When omitted, clientName, clientAddress, clientMobile, and reference are required."
+          },
+          "inquiryDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Step 1 — Inquiry Date"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EventStatus"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Step 1 — Event Start Date"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Step 1 — Event End Date"
+          },
+          "eventFunctionName": {
+            "type": "string",
+            "description": "Step 1 — Event Function"
+          },
+          "venueName": {
+            "type": "string",
+            "description": "Step 1 — Venue Name"
+          },
+          "cityName": {
+            "type": "string",
+            "description": "Step 1 — City Name"
+          },
+          "clientName": {
+            "type": "string",
+            "description": "Step 2 — Client Name"
+          },
+          "clientAddress": {
+            "type": "string",
+            "description": "Step 2 — Client Address"
+          },
+          "clientMobile": {
+            "type": "string",
+            "description": "Step 2 — Client Contact No"
+          },
+          "reference": {
+            "type": "string",
+            "description": "Step 2 — Reference"
+          },
+          "isHighPriority": {
+            "type": "boolean",
+            "default": false,
+            "description": "Step 2 — High Priority"
+          },
+          "tabletMedia": {
+            "$ref": "#/components/schemas/ManagerTabletMedia"
+          },
+          "brideGroomInformation": {
+            "$ref": "#/components/schemas/ManagerBrideGroomInformation"
+          },
+          "functions": {
+            "type": "array",
+            "description": "Step 3/4 — Function Details",
+            "items": {
+              "$ref": "#/components/schemas/EventFunction"
+            }
+          }
+        }
+      },
+      "UpdateManagerAllTasksRequest": {
+        "type": "object",
+        "description": "Partial update for the manager All Tasks screen",
+        "properties": {
+          "actualArrivalTime": {
+            "type": "string",
+            "example": "05:30:00",
+            "description": "HH:mm:ss 24-hour format"
+          },
+          "followersAchievedCount": {
+            "type": "integer",
+            "minimum": 0,
+            "example": 22
+          },
+          "testimonialReelsAchievedCount": {
+            "type": "integer",
+            "minimum": 0,
+            "example": 1
+          },
+          "activeSessionRecording": {
+            "type": "boolean",
+            "example": true
+          },
+          "numberOfVideoShoots": {
+            "type": "integer",
+            "minimum": 0,
+            "example": 3
+          },
+          "mainEventHighlights": {
+            "type": "boolean",
+            "example": true
+          },
+          "photosCaptured": {
+            "type": "integer",
+            "minimum": 0,
+            "example": 45
+          },
+          "amountCollected": {
+            "type": "number",
+            "minimum": 0,
+            "example": 22000
+          }
+        }
+      },
+      "ManagerAllTaskAttachment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventId": {
+            "type": "integer"
+          },
+          "fileUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "originalName": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ManagerAllTasksResponse": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string"
+          },
+          "eventUuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "in_progress",
+              "completed",
+              "abandoned"
+            ]
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "time",
+                    "count_progress",
+                    "media_tracking",
+                    "billing",
+                    "attachments"
+                  ]
+                },
+                "target": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "targetLabel": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "reportingTime": {
+                  "type": "string",
+                  "nullable": true,
+                  "example": "05:00 AM"
+                },
+                "actualArrivalTime": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "achievedCount": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "progressPercentage": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "activeSessionRecordingStatus": {
+                  "type": "boolean",
+                  "nullable": true
+                },
+                "numberOfVideoShoots": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "mainEventHighlightsStatus": {
+                  "type": "boolean",
+                  "nullable": true
+                },
+                "photosCaptured": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "amountCollected": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "acceptedTypes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "nullable": true
+                },
+                "maxFileSizeMb": {
+                  "type": "integer",
+                  "nullable": true
+                }
+              }
+            }
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManagerAllTaskAttachment"
+            }
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "abandonedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -11984,6 +14625,37 @@
             "type": "boolean",
             "default": true
           }
+        }
+      },
+      "CreateManagerRequest": {
+        "type": "object",
+        "required": [
+          "memberName"
+        ],
+        "properties": {
+          "memberName": {
+            "type": "string",
+            "example": "Julian Reed",
+            "description": "Display name for the new manager"
+          },
+          "name": {
+            "type": "string",
+            "example": "Julian Reed",
+            "description": "Alias for memberName"
+          },
+          "designation": {
+            "type": "string",
+            "example": "Content Strategist",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "example": {
+          "memberName": "Julian Reed",
+          "designation": "Content Strategist"
         }
       },
       "CreateClientRequest": {
@@ -12689,6 +15361,10 @@
               "other"
             ]
           },
+          "designation": {
+            "type": "string",
+            "nullable": true
+          },
           "isActive": {
             "type": "boolean"
           }
@@ -12743,6 +15419,215 @@
           }
         ]
       },
+      "TeamAllocationMember": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Staff ID"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "badge": {
+            "type": "string",
+            "example": "LEAD"
+          },
+          "assignments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Assignment pill labels shown on the allocation board"
+          },
+          "statusLabel": {
+            "type": "string",
+            "example": "CURRENTLY ACTIVE"
+          },
+          "statusKey": {
+            "type": "string",
+            "example": "active"
+          }
+        }
+      },
+      "TeamAllocationSummary": {
+        "type": "object",
+        "properties": {
+          "totalStaff": {
+            "type": "integer"
+          },
+          "activeTasks": {
+            "type": "integer"
+          },
+          "todayAdded": {
+            "type": "integer"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamAllocationMember"
+            }
+          }
+        }
+      },
+      "ManagerStaffReportTask": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "time": {
+            "type": "string",
+            "example": "07:21"
+          },
+          "isLocked": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ManagerStaffReport": {
+        "type": "object",
+        "properties": {
+          "manager": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "example": "Event Manager"
+              },
+              "isActive": {
+                "type": "boolean"
+              }
+            }
+          },
+          "efficiencyScore": {
+            "type": "number",
+            "example": 0
+          },
+          "assignedTables": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Assigned table pill labels on the Manager Report screen (table numbers assigned to this manager)",
+            "example": [
+              "Table 1",
+              "Table 2",
+              "Table 3"
+            ]
+          },
+          "stats": {
+            "type": "object",
+            "properties": {
+              "interactions": {
+                "type": "integer"
+              },
+              "filesCaptured": {
+                "type": "integer"
+              },
+              "activeTimeLabel": {
+                "type": "string",
+                "example": "60m"
+              },
+              "tasksCompletedLabel": {
+                "type": "string",
+                "example": "0/3"
+              }
+            }
+          },
+          "doneTasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManagerStaffReportTask"
+            }
+          },
+          "pendingTasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManagerStaffReportTask"
+            }
+          },
+          "activityTimeline": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      },
+      "AssignTeamTasksRequest": {
+        "type": "object",
+        "required": [
+          "tasks"
+        ],
+        "properties": {
+          "tasks": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "title"
+              ],
+              "properties": {
+                "task_template_id": {
+                  "oneOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  ],
+                  "nullable": true
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "due_date": {
+                  "type": "string",
+                  "format": "date-time",
+                  "nullable": true
+                }
+              }
+            }
+          },
+          "assignedTo": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "format": "uuid"
+              }
+            ],
+            "nullable": true
+          }
+        }
+      },
       "TaskTemplate": {
         "type": "object",
         "properties": {
@@ -12785,6 +15670,295 @@
           "category": {
             "type": "string",
             "example": "Setup"
+          }
+        }
+      },
+      "FeedbackQuestion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "questionText": {
+            "type": "string",
+            "example": "How was the food quality?"
+          },
+          "questionType": {
+            "type": "string",
+            "enum": [
+              "rating",
+              "text",
+              "single_choice",
+              "multiple_choice",
+              "yes_no"
+            ]
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "example": [
+              "Excellent",
+              "Good",
+              "Average",
+              "Poor"
+            ]
+          },
+          "isRequired": {
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "type": "integer"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "eventId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Null for global questions"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FeedbackQuestionList": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/FeedbackQuestion"
+        }
+      },
+      "CreateFeedbackQuestionRequest": {
+        "type": "object",
+        "required": [
+          "questionText",
+          "questionType"
+        ],
+        "properties": {
+          "questionText": {
+            "type": "string",
+            "example": "How was the service?"
+          },
+          "questionType": {
+            "type": "string",
+            "enum": [
+              "rating",
+              "text",
+              "single_choice",
+              "multiple_choice",
+              "yes_no"
+            ]
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "Yes",
+              "No"
+            ]
+          },
+          "isRequired": {
+            "type": "boolean",
+            "default": true
+          },
+          "sortOrder": {
+            "type": "integer",
+            "default": 0
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          },
+          "eventId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Omit or null for global questions"
+          }
+        }
+      },
+      "UpdateFeedbackQuestionRequest": {
+        "type": "object",
+        "properties": {
+          "questionText": {
+            "type": "string"
+          },
+          "questionType": {
+            "type": "string",
+            "enum": [
+              "rating",
+              "text",
+              "single_choice",
+              "multiple_choice",
+              "yes_no"
+            ]
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "isRequired": {
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "type": "integer"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "eventId": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ReorderFeedbackQuestionsRequest": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "sortOrder"
+              ],
+              "properties": {
+                "id": {
+                  "$ref": "#/components/schemas/IdParam"
+                },
+                "sortOrder": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        }
+      },
+      "SubmitFeedbackQuestionnaireRequest": {
+        "type": "object",
+        "required": [
+          "eventId",
+          "answers"
+        ],
+        "properties": {
+          "eventId": {
+            "$ref": "#/components/schemas/IdParam"
+          },
+          "clientName": {
+            "type": "string",
+            "example": "John Doe"
+          },
+          "tableNo": {
+            "type": "string",
+            "example": "T-12"
+          },
+          "answers": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "questionId"
+              ],
+              "properties": {
+                "questionId": {
+                  "$ref": "#/components/schemas/IdParam"
+                },
+                "answerText": {
+                  "type": "string",
+                  "example": "Excellent"
+                },
+                "answerRating": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 5,
+                  "example": 4.5
+                },
+                "answerOptions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "FeedbackSubmission": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "clientName": {
+            "type": "string",
+            "nullable": true
+          },
+          "tableNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "responses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "questionId": {
+                  "type": "string"
+                },
+                "answerText": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "answerRating": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "answerOptions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "nullable": true
+                }
+              }
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -13115,6 +16289,24 @@
               "captain"
             ]
           },
+          "staffId": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "format": "uuid"
+              }
+            ],
+            "nullable": true,
+            "description": "Manager staff assigned to this table"
+          },
+          "staffName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Assigned manager name (read-only)"
+          },
           "userCode": {
             "type": "string",
             "nullable": true
@@ -13126,6 +16318,81 @@
           "eventLabel": {
             "type": "string",
             "nullable": true
+          },
+          "isAssigned": {
+            "type": "boolean",
+            "description": "True when a manager or user code is set (read-only)"
+          }
+        }
+      },
+      "AssignTableManagerRequest": {
+        "type": "object",
+        "required": [
+          "staffId"
+        ],
+        "properties": {
+          "staffId": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "format": "uuid"
+              }
+            ],
+            "description": "Event manager to assign to the selected table"
+          },
+          "allocationType": {
+            "type": "string",
+            "enum": [
+              "dining",
+              "captain"
+            ],
+            "default": "dining",
+            "description": "Use `dining` for Table View, `captain` for Captain View"
+          }
+        }
+      },
+      "AssignManagerTablesRequest": {
+        "type": "object",
+        "required": [
+          "staffId",
+          "tableNumbers"
+        ],
+        "properties": {
+          "staffId": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "format": "uuid"
+              }
+            ],
+            "description": "Manager staff ID (numeric or UUID)"
+          },
+          "tableNumbers": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": [
+              1,
+              2,
+              3
+            ]
+          },
+          "allocationType": {
+            "type": "string",
+            "enum": [
+              "dining",
+              "captain"
+            ],
+            "default": "dining"
           }
         }
       },
@@ -13671,6 +16938,21 @@
           },
           "setAsBrideGroomPhoto": {
             "type": "boolean"
+          }
+        }
+      },
+      "ReportPhotoDeleteResponse": {
+        "type": "object",
+        "properties": {
+          "photoId": {
+            "type": "string"
+          },
+          "reportId": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean",
+            "example": true
           }
         }
       },

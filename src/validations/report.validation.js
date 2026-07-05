@@ -75,6 +75,10 @@ const reportIdParamSchema = Joi.object({
   reportId: idParam.required(),
 });
 
+const photoIdParamSchema = Joi.object({
+  photoId: idParam.required(),
+});
+
 module.exports = {
   createReportSchema,
   listReportTemplatesSchema,
@@ -89,4 +93,5 @@ module.exports = {
   shareReportSchema,
   generatePdfSchema,
   reportIdParamSchema,
+  photoIdParamSchema,
 };

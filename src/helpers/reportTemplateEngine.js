@@ -25,17 +25,23 @@ const FONT_PAIRINGS = {
   playfair_inter: {
     heading: "'Playfair Display', Georgia, 'Times New Roman', serif",
     body: "'Inter', 'Helvetica Neue', Arial, sans-serif",
-    googleFonts: '',
+    script: "'Great Vibes', 'Brush Script MT', cursive",
+    googleFonts:
+      'https://fonts.googleapis.com/css2?family=Great+Vibes&family=Inter:wght@300;400;500&family=Playfair+Display:wght@400;500&display=swap',
   },
   space_grotesk_mono: {
     heading: "'Space Grotesk', 'Helvetica Neue', Arial, sans-serif",
     body: "'IBM Plex Mono', 'Courier New', monospace",
-    googleFonts: '',
+    script: "'Great Vibes', cursive",
+    googleFonts:
+      'https://fonts.googleapis.com/css2?family=Great+Vibes&family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;600;700&display=swap',
   },
   fraunces_inter: {
     heading: "'Fraunces', Georgia, 'Times New Roman', serif",
     body: "'Inter', 'Helvetica Neue', Arial, sans-serif",
-    googleFonts: '',
+    script: "'Great Vibes', cursive",
+    googleFonts:
+      'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Great+Vibes&family=Inter:wght@400;500;600&display=swap',
   },
 };
 
@@ -51,6 +57,10 @@ const PHOTO_FILTER_CSS = {
 Handlebars.registerHelper('eq', (a, b) => a === b);
 Handlebars.registerHelper('gt', (a, b) => a > b);
 Handlebars.registerHelper('mod', (a, b) => a % b);
+Handlebars.registerHelper('or', (...args) => {
+  args.pop();
+  return args.some(Boolean);
+});
 
 function resolveTemplateFolder(template) {
   if (!template) return 'premium';
@@ -67,7 +77,10 @@ function loadPartial(folder, name) {
 
   if (PARTIAL_CACHE.has(cacheKey)) return partialKey;
 
-  const partialPath = path.join(REPORT_ROOT, 'templates', folder, `${name}.hbs`);
+  let partialPath = path.join(REPORT_ROOT, 'templates', folder, `${name}.hbs`);
+  if (!fs.existsSync(partialPath) && name === 'body') {
+    partialPath = path.join(REPORT_ROOT, 'templates', '_shared', `${name}.hbs`);
+  }
   const source = readFileSafe(partialPath);
   if (!source) {
     throw new Error(`Template partial not found: report/templates/${folder}/${name}.hbs`);
@@ -120,12 +133,25 @@ function buildDynamicCss(report) {
       --color-background: ${color('background', '#1A1A1A')};
       --font-heading: ${fonts.heading};
       --font-body: ${fonts.body};
+      --font-script: ${fonts.script || "'Great Vibes', cursive"};
       --font-scale: ${scale};
       --grid-gap: ${gapPx}px;
       --photo-filter: ${filterValue};
       --photo-filter-intensity: ${intensity / 100};
     }
   `;
+}
+
+function formatEventDate(dateStr, { uppercase = false } = {}) {
+  if (!dateStr) return '';
+  const parsed = new Date(dateStr);
+  if (Number.isNaN(parsed.getTime())) return String(dateStr);
+  const formatted = parsed.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  return uppercase ? formatted.toUpperCase() : formatted;
 }
 
 function groupMenuSections(items) {
@@ -158,17 +184,34 @@ function resolveAssetUrl(url, baseUrl) {
   return url;
 }
 
+function resolveCardBackground(report, eventImages, gallery, baseUrl) {
+  // 1. Admin explicitly selected bride/groom photo on the report
+  if (report.brideGroomPhotoUrl) {
+    return resolveAssetUrl(report.brideGroomPhotoUrl, baseUrl);
+  }
+  // 2. Event bride/groom images (default from admin on event)
+  if (eventImages[0]) return eventImages[0];
+  // 3. Report gallery uploads
+  if (gallery[0]) return gallery[0];
+  // 4. Template preview only as last resort
+  if (report.template?.previewUrl) {
+    return resolveAssetUrl(report.template.previewUrl, baseUrl);
+  }
+  return null;
+}
+
 function buildViewModel(report, menuItems, brideGroomImages, baseUrl) {
   const photos = report.photos || [];
   const gallery = photos.map((p) => resolveAssetUrl(p.imageUrl, baseUrl)).filter(Boolean);
   const eventImages = (brideGroomImages || []).map((u) => resolveAssetUrl(u, baseUrl)).filter(Boolean);
 
+  const cardBackground = resolveCardBackground(report, eventImages, gallery, baseUrl);
   const brideImage = resolveAssetUrl(
     report.brideGroomPhotoUrl || eventImages[0] || gallery[0] || null,
     baseUrl
   );
   const groomImage = resolveAssetUrl(eventImages[1] || gallery[1] || null, baseUrl);
-  const heroImage = brideImage || gallery[0] || null;
+  const heroImage = cardBackground || brideImage || gallery[0] || null;
   const coverImage = heroImage;
   const backgroundImage = resolveAssetUrl(report.template?.previewUrl, baseUrl);
   const logo = resolveAssetUrl(report.package?.logoUrl, baseUrl);
@@ -183,7 +226,8 @@ function buildViewModel(report, menuItems, brideGroomImages, baseUrl) {
     brideName: report.brideName || '',
     groomName: report.groomName || '',
     clientName: report.clientName,
-    eventDate: report.eventStartDate,
+    eventDate: formatEventDate(report.eventStartDate),
+    eventDateUpper: formatEventDate(report.eventStartDate, { uppercase: true }),
     venueName: report.venueName,
     cityName: report.cityName,
     packageName: report.package?.name || '',
@@ -197,6 +241,7 @@ function buildViewModel(report, menuItems, brideGroomImages, baseUrl) {
       logo,
       coverImage,
       backgroundImage,
+      cardBackground,
       brideImage,
       groomImage,
     },
@@ -213,9 +258,9 @@ function compileTemplate(folder) {
   const cacheKey = `main:${folder}`;
   if (TEMPLATE_CACHE.has(cacheKey)) return TEMPLATE_CACHE.get(cacheKey);
 
-  const headerPartial = loadPartial(folder, 'header');
+  loadPartial(folder, 'header');
   const bodyPartial = loadPartial(folder, 'body');
-  const footerPartial = loadPartial(folder, 'footer');
+  loadPartial(folder, 'footer');
 
   const layoutSource = `
     <!DOCTYPE html>
@@ -224,13 +269,13 @@ function compileTemplate(folder) {
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>{{coupleName}} — Menu Report</title>
-      {{#if googleFontsUrl}}<link href="{{googleFontsUrl}}" rel="stylesheet" />{{/if}}
+      {{#if googleFontsUrl}}<link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+      <link href="{{googleFontsUrl}}" rel="stylesheet" />{{/if}}
       <style>{{{styles}}}</style>
     </head>
     <body class="report-body layout-{{layoutPosition}}">
-      {{> ${headerPartial}}}
       {{> ${bodyPartial}}}
-      {{> ${footerPartial}}}
     </body>
     </html>
   `;
@@ -248,6 +293,8 @@ function renderReportHtml(report, menuItems, brideGroomImages, baseUrl) {
   try {
     const html = compileTemplate(folder)({
       ...viewModel,
+      headerPartial: `${folder}-header`,
+      footerPartial: `${folder}-footer`,
       googleFontsUrl: fonts.googleFonts,
       styles: `${loadStyles(folder)}\n${buildDynamicCss(report)}`,
     });

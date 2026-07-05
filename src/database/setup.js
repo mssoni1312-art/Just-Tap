@@ -136,6 +136,10 @@ async function runSeeders(connection) {
         const hash = await bcrypt.hash('admin123', 12);
         return sql.replace(/__BCRYPT_HASH__/g, hash);
       }
+      if (file.includes('manager_users')) {
+        const hash = await bcrypt.hash('manager123', 12);
+        return sql.replace(/__BCRYPT_HASH__/g, hash);
+      }
       if (file.includes('auth_tokens')) {
         const [resetActive, resetUsed, otpPending, otpVerified] = await Promise.all([
           bcrypt.hash('sample-reset-token-active', 12),

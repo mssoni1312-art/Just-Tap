@@ -1,0 +1,49 @@
+<div class="menu-report">
+  {{#if images.cardBackground}}
+    <img class="report-bg-img" src="{{images.cardBackground}}" alt="" />
+  {{/if}}
+  <div class="report-overlay"></div>
+  <div class="frame-outer"></div>
+  <div class="frame-inner"></div>
+
+  <div class="menu-content">
+    {{#if images.logo}}
+      <div class="logo-badge">
+        <img class="content-logo" src="{{images.logo}}" alt="Logo" />
+      </div>
+    {{/if}}
+
+    <div class="content-header">
+      {{#if packageName}}
+        <p class="presents">{{packageName}} Presents</p>
+      {{else}}
+        <p class="presents">Premium Wedding Menu</p>
+      {{/if}}
+      <p class="couple-name">{{coupleName}}</p>
+      <div class="name-rule"></div>
+      {{#if eventDateUpper}}<p class="event-date">{{eventDateUpper}}</p>{{/if}}
+    </div>
+
+    {{#if hasMenu}}
+    <div class="menu-body">
+      {{#each menuSections}}
+        <div class="menu-category">
+          <table class="category-heading" align="center" cellpadding="0" cellspacing="0">
+            <tr>
+              <td class="line-col"><div class="heading-line"></div></td>
+              <td class="title-col"><p class="category-title">{{title}}</p></td>
+              <td class="line-col"><div class="heading-line"></div></td>
+            </tr>
+          </table>
+          {{#each items}}
+            <div class="menu-item">
+              <p class="item-name">{{name}}</p>
+              {{#if description}}<p class="item-desc">{{description}}</p>{{/if}}
+            </div>
+          {{/each}}
+        </div>
+      {{/each}}
+    </div>
+    {{/if}}
+  </div>
+</div>

@@ -68,6 +68,7 @@ const uploadService = {
 const analyticsService = {
   getSales: () => analyticsRepository.getSalesChart(),
   getMenuReport: (query) => analyticsRepository.getMenuReport(query),
+  getPackageRevenue: (staffId) => analyticsRepository.getPackageRevenue(staffId),
 };
 
 module.exports = { profileService, contentService, uploadService, analyticsService };

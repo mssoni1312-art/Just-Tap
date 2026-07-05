@@ -364,6 +364,32 @@ const reportRepository = {
     return result.insertId;
   },
 
+  async findPhotoById(photoId) {
+    const [rows] = await pool.execute(
+      `SELECT id, report_id, image_url, upload_id, sort_order
+       FROM report_photos
+       WHERE id = ? AND deleted_at IS NULL
+       LIMIT 1`,
+      [photoId]
+    );
+    if (!rows[0]) return null;
+    return {
+      id: rows[0].id,
+      reportId: rows[0].report_id,
+      imageUrl: rows[0].image_url,
+      uploadId: rows[0].upload_id,
+      sortOrder: rows[0].sort_order,
+    };
+  },
+
+  async softDeletePhoto(photoId) {
+    const [result] = await pool.execute(
+      `UPDATE report_photos SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL`,
+      [photoId]
+    );
+    return result.affectedRows > 0;
+  },
+
   async createShare(reportId, { shareToken, sharedBy, expiresAt, notes }) {
     const [result] = await pool.execute(
       `INSERT INTO report_shares (report_id, share_token, shared_by, expires_at, notes)
@@ -379,6 +405,14 @@ const reportRepository = {
       [reportId]
     );
     return rows[0]?.created_by || null;
+  },
+
+  async getEventId(reportId) {
+    const [rows] = await pool.execute(
+      `SELECT event_id FROM report_master WHERE id = ? AND deleted_at IS NULL LIMIT 1`,
+      [reportId]
+    );
+    return rows[0]?.event_id || null;
   },
 };
 

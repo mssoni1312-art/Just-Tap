@@ -23,6 +23,7 @@ const ALLOWED_SORT_COLUMNS = {
   menu_subcategories: ['sort_order', 'name', 'created_at', 'category_id'],
   menu_items: ['name', 'price', 'created_at', 'category_id', 'subcategory_id'],
   feedback: ['created_at', 'rating', 'client_name'],
+  feedback_questions: ['sort_order', 'created_at', 'question_text'],
   staff: ['name', 'role', 'created_at'],
   clients: ['name', 'city_name', 'created_at'],
   task_templates: ['name', 'category', 'created_at'],

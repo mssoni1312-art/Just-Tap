@@ -1,39 +1,35 @@
-.page-header,
-.page-footer {
-  padding: 10mm 14mm 0;
-}
-
-.cover-page {
+.menu-report {
   background: #ffffff;
-  color: #1a1a1a;
 }
 
-.cover-title,
-.header-title,
-.section-title {
-  color: #1a1a1a;
-  font-weight: 400;
-  letter-spacing: 0.08em;
+.report-overlay {
+  background: rgba(255, 255, 255, 0.55);
 }
 
-.gold-line {
-  background: #1a1a1a;
-  height: 1px;
-}
-
-.premium-frame {
-  display: none;
-}
-
-.menu-grid {
-  grid-template-columns: 1fr;
-  gap: calc(var(--grid-gap) * 1.5);
-}
-
-.menu-item-desc {
-  color: #666;
-}
-
-.cover-page .cover-package {
+.frame-outer,
+.frame-inner {
   border-color: #1a1a1a;
+}
+
+.heading-line,
+.name-rule {
+  background: #1a1a1a;
+}
+
+.presents,
+.couple-name,
+.category-title {
+  color: #1a1a1a;
+}
+
+.item-name {
+  color: #1a1a1a;
+}
+
+.item-desc {
+  color: #666666;
+}
+
+.event-date {
+  color: #333333;
 }

@@ -4,7 +4,11 @@ const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
 const swaggerUi = require('swagger-ui-express');
-const swaggerSpec = require('./config/swagger');
+const {
+  adminSwaggerSpec,
+  managerSwaggerSpec,
+  combinedSwaggerSpec,
+} = require('./config/swagger');
 const routes = require('./routes');
 const healthRoutes = require('./routes/health.routes');
 const errorHandler = require('./middleware/error.middleware');
@@ -41,33 +45,68 @@ app.use(generalLimiter);
 
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
+const swaggerUiOptions = {
+  explorer: true,
+  customCss: '.swagger-ui .topbar { display: none }',
+  swaggerOptions: {
+    persistAuthorization: true,
+    docExpansion: 'list',
+    filter: true,
+    showRequestDuration: true,
+    tryItOutEnabled: true,
+    displayOperationId: true,
+  },
+};
+
 app.use(
   '/api/docs',
-  swaggerUi.serve,
-  swaggerUi.setup(swaggerSpec, {
-    explorer: true,
+  swaggerUi.serveFiles(adminSwaggerSpec, swaggerUiOptions),
+  swaggerUi.setup(adminSwaggerSpec, {
+    ...swaggerUiOptions,
     customSiteTitle: 'Just Tap Super Admin API',
-    customCss: '.swagger-ui .topbar { display: none }',
-    swaggerOptions: {
-      persistAuthorization: true,
-      docExpansion: 'list',
-      filter: true,
-      showRequestDuration: true,
-      tryItOutEnabled: true,
-      displayOperationId: true,
-    },
   })
 );
 app.get('/api/docs.json', (_req, res) => {
   res.setHeader('Content-Type', 'application/json');
-  res.json(swaggerSpec);
+  res.json(adminSwaggerSpec);
 });
+app.get('/api/docs', (_req, res) => res.redirect(301, '/api/docs/'));
+
+const managerRouter = require('./routes/manager');
+
+const managerSwaggerSetup = {
+  explorer: true,
+  customSiteTitle: 'Just Tap Manager API',
+  customCss: '.swagger-ui .topbar { display: none }',
+  swaggerOptions: {
+    url: '/api/manager/docs.json',
+    persistAuthorization: true,
+    docExpansion: 'list',
+    filter: true,
+    showRequestDuration: true,
+    tryItOutEnabled: true,
+    displayOperationId: true,
+    validatorUrl: null,
+  },
+};
+
+// Manager Swagger — must be registered BEFORE app.use('/api/manager', managerRouter)
+app.get('/api/manager/docs.json', (_req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.json(managerSwaggerSpec);
+});
+app.use('/api/manager/docs', swaggerUi.serve);
+app.get('/api/manager/docs', swaggerUi.setup(null, managerSwaggerSetup));
+app.get('/api/manager/docs/', swaggerUi.setup(null, managerSwaggerSetup));
+
 app.get('/openapi.json', (_req, res) => {
   res.setHeader('Content-Type', 'application/json');
-  res.json(swaggerSpec);
+  res.json(combinedSwaggerSpec);
 });
 
 app.use('/api/v1', routes);
+app.use('/api/manager', managerRouter);
+app.use('/api/v1/manager', managerRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ success: false, message: 'Route not found', errors: [] });

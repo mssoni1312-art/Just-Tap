@@ -6,6 +6,7 @@ const formatClient = (row) => ({
   uuid: row.uuid,
   name: row.name,
   catererName: row.caterer_name,
+  clientAddress: row.client_address || null,
   cityName: row.city_name,
   contactNo: row.contact_no,
   reference: row.reference,
@@ -60,11 +61,12 @@ const clientRepository = {
 
   async create(data) {
     const [result] = await pool.execute(
-      `INSERT INTO clients (name, caterer_name, city_name, contact_no, reference, is_high_priority)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO clients (name, caterer_name, client_address, city_name, contact_no, reference, is_high_priority)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         data.name,
         data.caterer_name,
+        data.client_address || null,
         data.city_name,
         data.contact_no || null,
         data.reference,

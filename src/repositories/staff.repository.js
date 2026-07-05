@@ -6,6 +6,7 @@ const formatStaff = (row) => ({
   uuid: row.uuid,
   name: row.name,
   role: row.role,
+  designation: row.designation || null,
   isActive: Boolean(row.is_active),
   createdAt: row.created_at,
   updatedAt: row.updated_at,
@@ -66,10 +67,25 @@ const staffRepository = {
     return rows[0] || null;
   },
 
+  async findByUserId(userId) {
+    const [rows] = await pool.execute(
+      `SELECT * FROM staff
+       WHERE user_id = ? AND deleted_at IS NULL AND role = 'event_manager' AND is_active = 1
+       LIMIT 1`,
+      [userId]
+    );
+    return rows[0] || null;
+  },
+
   async create(data) {
     const [result] = await pool.execute(
-      'INSERT INTO staff (name, role, is_active) VALUES (?, ?, ?)',
-      [data.name, data.role || 'event_manager', data.is_active !== false ? 1 : 0]
+      'INSERT INTO staff (name, role, designation, is_active) VALUES (?, ?, ?, ?)',
+      [
+        data.name,
+        data.role || 'event_manager',
+        data.designation || null,
+        data.is_active !== false ? 1 : 0,
+      ]
     );
     return result.insertId;
   },
@@ -77,7 +93,7 @@ const staffRepository = {
   async update(id, data) {
     const fields = [];
     const values = [];
-    for (const key of ['name', 'role', 'is_active']) {
+    for (const key of ['name', 'role', 'designation', 'is_active']) {
       if (data[key] !== undefined) {
         fields.push(`${key} = ?`);
         values.push(key === 'is_active' ? (data[key] ? 1 : 0) : data[key]);

@@ -15,6 +15,18 @@ const managerService = {
 
     return staffRepository.findAll({ ...query, role: 'event_manager' });
   },
+
+  async create(data) {
+    const name = (data.name || data.memberName).trim();
+    const id = await staffRepository.create({
+      name,
+      role: 'event_manager',
+      designation: data.designation?.trim() || null,
+      is_active: data.isActive,
+    });
+    const row = await staffRepository.findById(id);
+    return staffRepository.formatStaff(row);
+  },
 };
 
 module.exports = managerService;

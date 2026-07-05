@@ -67,6 +67,13 @@ const createCaptainSchema = Joi.object({
   isActive: Joi.boolean().default(true),
 });
 
+const createManagerSchema = Joi.object({
+  name: Joi.string().trim(),
+  memberName: Joi.string().trim(),
+  designation: Joi.string().max(150).allow(null, '').trim(),
+  isActive: Joi.boolean().default(true),
+}).or('name', 'memberName');
+
 const createClientSchema = Joi.object({
   name: Joi.string().required(),
   catererName: Joi.string().required(),
@@ -207,6 +214,7 @@ const saveBillingPreviewSchema = Joi.object({
 const tableAssignmentSchema = Joi.object({
   tableNumber: Joi.number().integer().required(),
   allocationType: Joi.string().valid('dining', 'captain'),
+  staffId: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid()).allow(null),
   userCode: Joi.string().allow(null, ''),
   description: Joi.string().allow(null, ''),
   eventLabel: Joi.string().allow(null, ''),
@@ -214,6 +222,17 @@ const tableAssignmentSchema = Joi.object({
 
 const bulkTablesSchema = Joi.object({
   assignments: Joi.array().items(tableAssignmentSchema).min(1).required(),
+});
+
+const assignTableManagerSchema = Joi.object({
+  staffId: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid()).required(),
+  allocationType: Joi.string().valid('dining', 'captain').default('dining'),
+});
+
+const assignManagerTablesSchema = Joi.object({
+  staffId: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid()).required(),
+  tableNumbers: Joi.array().items(Joi.number().integer().positive()).min(1).required(),
+  allocationType: Joi.string().valid('dining', 'captain').default('dining'),
 });
 
 const tableAllocationSchema = Joi.object({
@@ -313,6 +332,67 @@ const savePackageSettingsSchema = Joi.object({
   })),
 }).or('features', 'packages');
 
+const questionTypeSchema = Joi.string().valid('rating', 'text', 'single_choice', 'multiple_choice', 'yes_no');
+
+const createFeedbackQuestionSchema = Joi.object({
+  questionText: Joi.string().required(),
+  questionType: questionTypeSchema.required(),
+  options: Joi.array().items(Joi.string()).min(2).when('questionType', {
+    is: Joi.valid('single_choice', 'multiple_choice'),
+    then: Joi.required(),
+    otherwise: Joi.forbidden(),
+  }),
+  isRequired: Joi.boolean().default(true),
+  sortOrder: Joi.number().integer().min(0).default(0),
+  isActive: Joi.boolean().default(true),
+  eventId: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid(), Joi.string().pattern(/^\d+$/)).allow(null),
+});
+
+const updateFeedbackQuestionSchema = Joi.object({
+  questionText: Joi.string(),
+  questionType: questionTypeSchema,
+  options: Joi.array().items(Joi.string()).min(2),
+  isRequired: Joi.boolean(),
+  sortOrder: Joi.number().integer().min(0),
+  isActive: Joi.boolean(),
+  eventId: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid(), Joi.string().pattern(/^\d+$/)).allow(null),
+});
+
+const listFeedbackQuestionsSchema = paginationQuery.keys({
+  eventId: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid(), Joi.string().pattern(/^\d+$/)),
+  scope: Joi.string().valid('global'),
+  isActive: Joi.boolean(),
+});
+
+const reorderFeedbackQuestionsSchema = Joi.object({
+  items: Joi.array().items(
+    Joi.object({
+      id: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid(), Joi.string().pattern(/^\d+$/)).required(),
+      sortOrder: Joi.number().integer().min(0).required(),
+    })
+  ).min(1).required(),
+});
+
+const publicFeedbackQuestionsSchema = Joi.object({
+  eventId: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid(), Joi.string().pattern(/^\d+$/)).required(),
+});
+
+const feedbackAnswerSchema = Joi.object({
+  questionId: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid(), Joi.string().pattern(/^\d+$/)).required(),
+  answerText: Joi.string().allow(null, ''),
+  answerRating: Joi.number().min(1).max(5).allow(null),
+  answerOptions: Joi.array().items(Joi.string()),
+});
+
+const submitFeedbackQuestionnaireSchema = Joi.object({
+  eventId: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid(), Joi.string().pattern(/^\d+$/)).required(),
+  clientName: Joi.string().allow(null, ''),
+  tableNo: Joi.string().allow(null, ''),
+  answers: Joi.array().items(feedbackAnswerSchema).min(1).required(),
+});
+
+const listFeedbackSubmissionsSchema = paginationQuery;
+
 module.exports = {
   listInquiriesSchema,
   createInquirySchema,
@@ -325,6 +405,7 @@ module.exports = {
   listClientsSchema,
   listCaptainsSchema,
   createCaptainSchema,
+  createManagerSchema,
   createClientSchema,
   bulkUpdateStaffSchema,
   createCategorySchema,
@@ -343,6 +424,8 @@ module.exports = {
   saveBillingPreviewSchema,
   tableAssignmentSchema,
   bulkTablesSchema,
+  assignTableManagerSchema,
+  assignManagerTablesSchema,
   tableAllocationSchema,
   createTaskSchema,
   updateTaskSchema,
@@ -357,4 +440,11 @@ module.exports = {
   createManagePackageSchema,
   updateManagePackageSchema,
   savePackageSettingsSchema,
+  createFeedbackQuestionSchema,
+  updateFeedbackQuestionSchema,
+  listFeedbackQuestionsSchema,
+  reorderFeedbackQuestionsSchema,
+  publicFeedbackQuestionsSchema,
+  submitFeedbackQuestionnaireSchema,
+  listFeedbackSubmissionsSchema,
 };

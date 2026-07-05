@@ -8,6 +8,7 @@ const idParam = Joi.alternatives().try(
 
 const eventIdParam = Joi.object({ eventId: idParam.required() });
 const idParamSchema = Joi.object({ id: idParam.required() });
+const lineItemIdParamSchema = Joi.object({ lineItemId: idParam.required() });
 
 const paginationQuery = Joi.object({
   page: Joi.number().integer().min(1),
@@ -34,6 +35,7 @@ module.exports = {
   idParam,
   eventIdParam,
   idParamSchema,
+  lineItemIdParamSchema,
   paginationQuery,
   exportQuerySchema,
   bulkIdsSchema,

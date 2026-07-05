@@ -17,6 +17,8 @@ const contentRoutes = require('./content.routes');
 const uploadsRoutes = require('./uploads.routes');
 const activityRoutes = require('./activity.routes');
 const reportRoutes = require('./report.routes');
+const feedbackQuestionRoutes = require('./feedbackQuestion.routes');
+const publicRoutes = require('./public.routes');
 
 const router = express.Router();
 
@@ -39,5 +41,7 @@ router.use('/content', contentRoutes);
 router.use('/uploads', uploadsRoutes);
 router.use('/activity', activityRoutes);
 router.use('/report', reportRoutes);
+router.use('/feedback-questions', feedbackQuestionRoutes);
+router.use('/public', publicRoutes);
 
 module.exports = router;

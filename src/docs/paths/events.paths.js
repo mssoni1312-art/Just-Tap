@@ -158,6 +158,37 @@ const eventsPaths = {
       requestBody: jsonBody('TableAssignment', true, { tableNumber: 5, allocationType: 'dining' }),
     }),
   },
+  '/events/{eventId}/tables/{tableNumber}/assign-manager': {
+    post: op('post', ['Events', 'Tables'], 'Assign manager to a table', {
+      operationId: 'eventTableAssignManager',
+      description:
+        'Assigns a single event manager to the selected table — powers the **Assign Access** dialog on the Assign Tables screen. Use `allocationType: dining` for Table View and `captain` for Captain View. The manager must be allocated to the event.',
+      parameters: [
+        eventIdParam,
+        { name: 'tableNumber', in: 'path', required: true, schema: { type: 'integer', example: 4 } },
+      ],
+      requestBody: jsonBody('AssignTableManagerRequest', true, {
+        staffId: 3,
+        allocationType: 'dining',
+      }),
+      successDescription: 'Manager assigned to table',
+      responseSchema: 'TableAssignment',
+    }),
+  },
+  '/events/{eventId}/tables/assign-manager': {
+    post: op('post', ['Events', 'Tables'], 'Assign tables to a manager (bulk)', {
+      operationId: 'eventTablesAssignManager',
+      description:
+        'Bulk-assigns one or more table numbers to a manager (staff) for an event. Prefer `POST /events/{eventId}/tables/{tableNumber}/assign-manager` for the single-table Assign Access dialog. Assigned tables appear in the Manager Report `assignedTables` list.',
+      parameters: [eventIdParam],
+      requestBody: jsonBody('AssignManagerTablesRequest', true, {
+        staffId: 3,
+        tableNumbers: [1, 2, 3],
+        allocationType: 'dining',
+      }),
+      successDescription: 'Tables assigned to manager',
+    }),
+  },
   '/events/{eventId}/table-allocation': {
     post: op('post', ['Events', 'Tables'], 'Save dining/captain table allocation', {
       operationId: 'eventTableAllocation',
@@ -228,6 +259,13 @@ const eventsPaths = {
     get: op('get', ['Events', 'Feedback'], 'Export feedback for event', {
       operationId: 'eventFeedbackExport',
       parameters: [eventIdParam, ...exportParams().slice(2)],
+    }),
+  },
+  '/events/{eventId}/feedback-questionnaire/submissions': {
+    get: op('get', ['Events', 'Feedback Questionnaire'], 'List questionnaire submissions for event', {
+      operationId: 'eventFeedbackQuestionnaireSubmissions',
+      parameters: [eventIdParam, ...paginationParams()],
+      responseSchema: 'PaginatedList',
     }),
   },
   '/events/{eventId}/billing': {

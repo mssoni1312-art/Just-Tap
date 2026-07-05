@@ -7,6 +7,7 @@ const eventController = require('../controllers/event.controller');
 const menuController = require('../controllers/menu.controller');
 const taskController = require('../controllers/task.controller');
 const feedbackController = require('../controllers/feedback.controller');
+const feedbackQuestionController = require('../controllers/feedbackQuestion.controller');
 const billingController = require('../controllers/billing.controller');
 const domain = require('../controllers/domain.controller');
 const {
@@ -27,9 +28,12 @@ const {
   saveBillingPreviewSchema,
   bulkTablesSchema,
   tableAssignmentSchema,
+  assignTableManagerSchema,
+  assignManagerTablesSchema,
   tableAllocationSchema,
   assignTasksSchema,
   listFeedbackSchema,
+  listFeedbackSubmissionsSchema,
   orderTableQuerySchema,
   reportQuerySchema,
   listTasksSchema,
@@ -69,6 +73,8 @@ router.put('/:eventId/billing/save-preview', validate(eventIdParam, 'params'), v
 
 router.get('/:eventId/tables', validate(eventIdParam, 'params'), asyncHandler(domain.table.get));
 router.put('/:eventId/tables', validate(eventIdParam, 'params'), validate(bulkTablesSchema), asyncHandler(domain.table.bulkSave));
+router.post('/:eventId/tables/assign-manager', validate(eventIdParam, 'params'), validate(assignManagerTablesSchema), asyncHandler(domain.table.assignManager));
+router.post('/:eventId/tables/:tableNumber/assign-manager', validate(tableNumberParamSchema, 'params'), validate(assignTableManagerSchema), asyncHandler(domain.table.assignTableManager));
 router.post('/:eventId/tables/:tableNumber/assign', validate(tableNumberParamSchema, 'params'), validate(tableAssignmentSchema), asyncHandler(domain.table.assign));
 router.post('/:eventId/table-allocation', validate(eventIdParam, 'params'), validate(tableAllocationSchema), asyncHandler(domain.table.allocate));
 
@@ -80,5 +86,6 @@ router.get('/:eventId/orders/report', validate(eventIdParam, 'params'), validate
 router.get('/:eventId/feedback/export', validate(eventIdParam, 'params'), validate(exportQuerySchema, 'query'), asyncHandler(feedbackController.export));
 router.get('/:eventId/feedback/summary', validate(eventIdParam, 'params'), asyncHandler(feedbackController.summary));
 router.get('/:eventId/feedback', validate(eventIdParam, 'params'), validate(listFeedbackSchema, 'query'), asyncHandler(feedbackController.list));
+router.get('/:eventId/feedback-questionnaire/submissions', validate(eventIdParam, 'params'), validate(listFeedbackSubmissionsSchema, 'query'), asyncHandler(feedbackQuestionController.listSubmissions));
 
 module.exports = router;

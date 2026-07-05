@@ -19,6 +19,7 @@ const {
   shareReportSchema,
   generatePdfSchema,
   reportIdParamSchema,
+  photoIdParamSchema,
 } = require('../validations/report.validation');
 const { idParamSchema } = require('../validations/common.validation');
 
@@ -34,6 +35,7 @@ router.post(
   validate(uploadPhotoSchema),
   asyncHandler(reportController.uploadPhoto),
 );
+router.delete('/photo/:photoId', validate(photoIdParamSchema, 'params'), asyncHandler(reportController.deletePhoto));
 router.post('/template/select', validate(selectTemplateSchema), asyncHandler(reportController.selectTemplate));
 router.patch('/theme', validate(updateThemeSchema), asyncHandler(reportController.updateTheme));
 router.patch('/typography', validate(updateTypographySchema), asyncHandler(reportController.updateTypography));

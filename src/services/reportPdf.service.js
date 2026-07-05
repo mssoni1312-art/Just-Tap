@@ -36,7 +36,6 @@ function getLaunchOptions() {
     '--disable-setuid-sandbox',
     '--disable-dev-shm-usage',
     '--disable-gpu',
-    '--font-render-hinting=none',
   ];
 
   const options = {
@@ -128,23 +127,41 @@ async function generatePdfBuffer(html) {
     });
 
     await page.setContent(html, {
-      waitUntil: 'domcontentloaded',
-      timeout: 30000,
+      waitUntil: 'networkidle0',
+      timeout: 60000,
     });
 
     await page.evaluate(async () => {
       if (document.fonts?.ready) {
         await Promise.race([
           document.fonts.ready,
-          new Promise((resolve) => setTimeout(resolve, 3000)),
+          new Promise((resolve) => setTimeout(resolve, 5000)),
         ]);
       }
+
+      const images = Array.from(document.images);
+      await Promise.all(
+        images.map(
+          (img) =>
+            new Promise((resolve) => {
+              if (img.complete) {
+                resolve();
+                return;
+              }
+              img.addEventListener('load', resolve, { once: true });
+              img.addEventListener('error', resolve, { once: true });
+              setTimeout(resolve, 5000);
+            })
+        )
+      );
     });
+
+    await page.emulateMediaType('screen');
 
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
-      preferCSSPageSize: true,
+      preferCSSPageSize: false,
       margin: { top: '0', right: '0', bottom: '0', left: '0' },
     });
 

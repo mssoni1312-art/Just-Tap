@@ -180,6 +180,104 @@ const taskRepository = {
     }
     return created;
   },
+
+  async findEventTaskById(id) {
+    const [rows] = await pool.execute(
+      `SELECT et.*, s.name AS assignee_name
+       FROM event_tasks et
+       LEFT JOIN staff s ON s.id = et.assigned_to
+       WHERE et.id = ? AND et.deleted_at IS NULL`,
+      [id]
+    );
+    return rows[0] || null;
+  },
+
+  async updateEventTask(id, data) {
+    const fields = [];
+    const values = [];
+    const map = {
+      title: 'title',
+      description: 'description',
+      status: 'status',
+      assigned_to: 'assignedTo',
+      due_date: 'dueDate',
+    };
+    for (const [col, key] of Object.entries(map)) {
+      if (data[key] !== undefined) {
+        fields.push(`${col} = ?`);
+        values.push(data[key]);
+      }
+    }
+    if (!fields.length) return;
+    values.push(id);
+    await pool.execute(
+      `UPDATE event_tasks SET ${fields.join(', ')}, updated_at = NOW() WHERE id = ? AND deleted_at IS NULL`,
+      values
+    );
+  },
+
+  async completeEventTask(id) {
+    await pool.execute(
+      `UPDATE event_tasks SET status = 'completed', updated_at = NOW() WHERE id = ? AND deleted_at IS NULL`,
+      [id]
+    );
+  },
+
+  async softDeleteEventTask(id) {
+    await pool.execute(
+      'UPDATE event_tasks SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL',
+      [id]
+    );
+  },
+
+  async findAllForManager(staffId, query) {
+    const { page, limit, offset, sortOrder } = parsePagination(query);
+    const sortBy = sanitizeSortBy('event_tasks', query.sortBy);
+    const conditions = ['et.deleted_at IS NULL', 'e.deleted_at IS NULL'];
+    const params = [];
+
+    conditions.push(`(
+      e.assigned_manager_id = ?
+      OR EXISTS (
+        SELECT 1 FROM event_manager_allocations ema
+        WHERE ema.event_id = e.id AND ema.staff_id = ? AND ema.deleted_at IS NULL
+      )
+    )`);
+    params.push(staffId, staffId);
+
+    if (query.status) {
+      conditions.push('et.status = ?');
+      params.push(query.status);
+    }
+    if (query.eventId) {
+      conditions.push('et.event_id = ?');
+      params.push(query.eventId);
+    }
+    if (query.search) {
+      conditions.push('(et.title LIKE ? OR et.description LIKE ?)');
+      const s = `%${query.search}%`;
+      params.push(s, s);
+    }
+
+    const where = conditions.join(' AND ');
+    const [countRows] = await pool.execute(
+      `SELECT COUNT(*) AS total FROM event_tasks et
+       JOIN events e ON e.id = et.event_id
+       WHERE ${where}`,
+      params
+    );
+    const [rows] = await pool.execute(
+      `SELECT et.*, s.name AS assignee_name, e.client_name AS event_client_name, e.venue_name AS event_venue
+       FROM event_tasks et
+       JOIN events e ON e.id = et.event_id
+       LEFT JOIN staff s ON s.id = et.assigned_to
+       WHERE ${where}
+       ORDER BY et.${sortBy} ${sortOrder}
+       LIMIT ${limit} OFFSET ${offset}`,
+      params
+    );
+    return buildPaginatedResponse(rows.map(formatEventTask), countRows[0].total, page, limit);
+  },
 };
 
 module.exports = taskRepository;

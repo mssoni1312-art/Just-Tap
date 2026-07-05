@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { MANAGER_EVENT_SCOPE_SQL, managerScopeParams } = require('../helpers/managerScope');
 
 const contentRepository = {
   async getPage(key) {
@@ -158,6 +159,61 @@ const analyticsRepository = {
       chartData,
       highestServed,
       lowestServed,
+    };
+  },
+
+  async getPackageRevenue(staffId = null) {
+    const eventConditions = ['e.deleted_at IS NULL', 'e.package_id IS NOT NULL'];
+    const params = [];
+
+    if (staffId) {
+      eventConditions.push(MANAGER_EVENT_SCOPE_SQL);
+      params.push(...managerScopeParams(staffId));
+    }
+
+    const eventJoinOn = eventConditions.join(' AND ');
+
+    const [rows] = await pool.execute(
+      `SELECT
+         mp.id,
+         mp.uuid,
+         mp.name,
+         mp.slug,
+         mp.price,
+         COUNT(DISTINCT e.id) AS event_count,
+         COALESCE(SUM(eb.grand_total), 0) AS total_revenue,
+         COALESCE(SUM(paid.total_paid), 0) AS collected_revenue
+       FROM menu_packages mp
+       LEFT JOIN events e ON e.package_id = mp.id AND ${eventJoinOn}
+       LEFT JOIN event_billing eb ON eb.event_id = e.id AND eb.deleted_at IS NULL
+       LEFT JOIN (
+         SELECT billing_id, SUM(amount) AS total_paid
+         FROM event_billing_payments
+         WHERE deleted_at IS NULL
+         GROUP BY billing_id
+       ) paid ON paid.billing_id = eb.id
+       WHERE mp.deleted_at IS NULL
+       GROUP BY mp.id, mp.uuid, mp.name, mp.slug, mp.price, mp.sort_order
+       ORDER BY mp.sort_order, mp.id`,
+      params,
+    );
+
+    const packages = rows.map((row) => ({
+      id: String(row.id),
+      uuid: row.uuid,
+      name: row.name,
+      slug: row.slug,
+      price: row.price != null ? Number(row.price) : null,
+      eventCount: Number(row.event_count) || 0,
+      totalRevenue: Number(row.total_revenue) || 0,
+      collectedRevenue: Number(row.collected_revenue) || 0,
+    }));
+
+    return {
+      packages,
+      totalRevenue: packages.reduce((sum, pkg) => sum + pkg.totalRevenue, 0),
+      totalCollected: packages.reduce((sum, pkg) => sum + pkg.collectedRevenue, 0),
+      totalEvents: packages.reduce((sum, pkg) => sum + pkg.eventCount, 0),
     };
   },
 };

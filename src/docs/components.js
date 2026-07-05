@@ -185,11 +185,138 @@ const components = {
         id: { type: 'integer' },
         name: { type: 'string' },
         venue: { type: 'string', nullable: true },
+        subVenueRemarks: { type: 'string', nullable: true },
         date: { type: 'string', format: 'date', nullable: true },
         startTime: { type: 'string', nullable: true },
         endTime: { type: 'string', nullable: true },
+        startDateTime: { type: 'string', format: 'date-time', nullable: true },
+        endDateTime: { type: 'string', format: 'date-time', nullable: true },
         pax: { type: 'integer', nullable: true },
         rate: { type: 'number', nullable: true },
+      },
+    },
+    ManagerTabletMedia: {
+      type: 'object',
+      description: 'Create Event step 2 — Tablet / Photography / Videography',
+      properties: {
+        service: { type: 'string', example: 'Just Tap Tablet' },
+        number: { type: 'integer', example: 10, description: 'Number of tablets' },
+        clientAddress: { type: 'string', example: 'Grand Hyatt Hall' },
+        hasPhotographyVideography: { type: 'boolean', default: false },
+      },
+    },
+    ManagerBrideGroomInformation: {
+      type: 'object',
+      description: 'Create Event step 2 — Bride and Groom Information',
+      properties: {
+        brideName: { type: 'string' },
+        brideInstagramId: { type: 'string' },
+        groomName: { type: 'string' },
+        groomInstagramId: { type: 'string' },
+        foodNotes: { type: 'string' },
+        eventRemarks: { type: 'string' },
+        venueName: { type: 'string', description: 'Optional venue override' },
+      },
+    },
+    CreateManagerEventRequest: {
+      type: 'object',
+      required: ['venueName', 'cityName', 'startDate', 'endDate'],
+      description: 'Manager mobile app create-event wizard (4 steps)',
+      properties: {
+        inquiryId: { $ref: '#/components/schemas/IdParam' },
+        clientId: {
+          $ref: '#/components/schemas/IdParam',
+          description: 'Existing client from GET /clients. When omitted, clientName, clientAddress, clientMobile, and reference are required.',
+        },
+        inquiryDate: { type: 'string', format: 'date', description: 'Step 1 — Inquiry Date' },
+        status: { $ref: '#/components/schemas/EventStatus' },
+        startDate: { type: 'string', format: 'date', description: 'Step 1 — Event Start Date' },
+        endDate: { type: 'string', format: 'date', description: 'Step 1 — Event End Date' },
+        eventFunctionName: { type: 'string', description: 'Step 1 — Event Function' },
+        venueName: { type: 'string', description: 'Step 1 — Venue Name' },
+        cityName: { type: 'string', description: 'Step 1 — City Name' },
+        clientName: { type: 'string', description: 'Step 2 — Client Name' },
+        clientAddress: { type: 'string', description: 'Step 2 — Client Address' },
+        clientMobile: { type: 'string', description: 'Step 2 — Client Contact No' },
+        reference: { type: 'string', description: 'Step 2 — Reference' },
+        isHighPriority: { type: 'boolean', default: false, description: 'Step 2 — High Priority' },
+        tabletMedia: { $ref: '#/components/schemas/ManagerTabletMedia' },
+        brideGroomInformation: { $ref: '#/components/schemas/ManagerBrideGroomInformation' },
+        functions: {
+          type: 'array',
+          description: 'Step 3/4 — Function Details',
+          items: { $ref: '#/components/schemas/EventFunction' },
+        },
+      },
+    },
+    UpdateManagerAllTasksRequest: {
+      type: 'object',
+      description: 'Partial update for the manager All Tasks screen',
+      properties: {
+        actualArrivalTime: { type: 'string', example: '05:30:00', description: 'HH:mm:ss 24-hour format' },
+        followersAchievedCount: { type: 'integer', minimum: 0, example: 22 },
+        testimonialReelsAchievedCount: { type: 'integer', minimum: 0, example: 1 },
+        activeSessionRecording: { type: 'boolean', example: true },
+        numberOfVideoShoots: { type: 'integer', minimum: 0, example: 3 },
+        mainEventHighlights: { type: 'boolean', example: true },
+        photosCaptured: { type: 'integer', minimum: 0, example: 45 },
+        amountCollected: { type: 'number', minimum: 0, example: 22000 },
+      },
+    },
+    ManagerAllTaskAttachment: {
+      type: 'object',
+      properties: {
+        id: { type: 'integer' },
+        uuid: { type: 'string', format: 'uuid' },
+        eventId: { type: 'integer' },
+        fileUrl: { type: 'string', format: 'uri' },
+        originalName: { type: 'string' },
+        mimeType: { type: 'string' },
+        sizeBytes: { type: 'integer' },
+        createdAt: { type: 'string', format: 'date-time' },
+      },
+    },
+    ManagerAllTasksResponse: {
+      type: 'object',
+      properties: {
+        eventId: { type: 'string' },
+        eventUuid: { type: 'string', format: 'uuid' },
+        status: { type: 'string', enum: ['in_progress', 'completed', 'abandoned'] },
+        tasks: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              key: { type: 'string' },
+              title: { type: 'string' },
+              description: { type: 'string', nullable: true },
+              type: {
+                type: 'string',
+                enum: ['time', 'count_progress', 'media_tracking', 'billing', 'attachments'],
+              },
+              target: { type: 'number', nullable: true },
+              targetLabel: { type: 'string', nullable: true },
+              reportingTime: { type: 'string', nullable: true, example: '05:00 AM' },
+              actualArrivalTime: { type: 'string', nullable: true },
+              achievedCount: { type: 'integer', nullable: true },
+              progressPercentage: { type: 'integer', nullable: true },
+              activeSessionRecordingStatus: { type: 'boolean', nullable: true },
+              numberOfVideoShoots: { type: 'integer', nullable: true },
+              mainEventHighlightsStatus: { type: 'boolean', nullable: true },
+              photosCaptured: { type: 'integer', nullable: true },
+              amountCollected: { type: 'number', nullable: true },
+              acceptedTypes: { type: 'array', items: { type: 'string' }, nullable: true },
+              maxFileSizeMb: { type: 'integer', nullable: true },
+            },
+          },
+        },
+        attachments: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/ManagerAllTaskAttachment' },
+        },
+        completedAt: { type: 'string', format: 'date-time', nullable: true },
+        abandonedAt: { type: 'string', format: 'date-time', nullable: true },
+        updatedAt: { type: 'string', format: 'date-time' },
       },
     },
     JustTapInformation: {
@@ -344,6 +471,20 @@ const components = {
       properties: {
         name: { type: 'string', example: 'Amit Patel' },
         isActive: { type: 'boolean', default: true },
+      },
+    },
+    CreateManagerRequest: {
+      type: 'object',
+      required: ['memberName'],
+      properties: {
+        memberName: { type: 'string', example: 'Julian Reed', description: 'Display name for the new manager' },
+        name: { type: 'string', example: 'Julian Reed', description: 'Alias for memberName' },
+        designation: { type: 'string', example: 'Content Strategist', nullable: true },
+        isActive: { type: 'boolean', default: true },
+      },
+      example: {
+        memberName: 'Julian Reed',
+        designation: 'Content Strategist',
       },
     },
     CreateClientRequest: {
@@ -621,6 +762,7 @@ const components = {
         uuid: { type: 'string', format: 'uuid' },
         name: { type: 'string' },
         role: { type: 'string', enum: ['event_manager', 'waiter', 'captain', 'other'] },
+        designation: { type: 'string', nullable: true },
         isActive: { type: 'boolean' },
       },
     },
@@ -645,6 +787,111 @@ const components = {
         },
       ],
     },
+    TeamAllocationMember: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Staff ID' },
+        name: { type: 'string' },
+        role: { type: 'string' },
+        badge: { type: 'string', example: 'LEAD' },
+        assignments: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Assignment pill labels shown on the allocation board',
+        },
+        statusLabel: { type: 'string', example: 'CURRENTLY ACTIVE' },
+        statusKey: { type: 'string', example: 'active' },
+      },
+    },
+    TeamAllocationSummary: {
+      type: 'object',
+      properties: {
+        totalStaff: { type: 'integer' },
+        activeTasks: { type: 'integer' },
+        todayAdded: { type: 'integer' },
+        members: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/TeamAllocationMember' },
+        },
+      },
+    },
+    ManagerStaffReportTask: {
+      type: 'object',
+      properties: {
+        title: { type: 'string' },
+        time: { type: 'string', example: '07:21' },
+        isLocked: { type: 'boolean' },
+      },
+    },
+    ManagerStaffReport: {
+      type: 'object',
+      properties: {
+        manager: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            name: { type: 'string' },
+            role: { type: 'string', example: 'Event Manager' },
+            isActive: { type: 'boolean' },
+          },
+        },
+        efficiencyScore: { type: 'number', example: 0 },
+        assignedTables: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Assigned table pill labels on the Manager Report screen (table numbers assigned to this manager)',
+          example: ['Table 1', 'Table 2', 'Table 3'],
+        },
+        stats: {
+          type: 'object',
+          properties: {
+            interactions: { type: 'integer' },
+            filesCaptured: { type: 'integer' },
+            activeTimeLabel: { type: 'string', example: '60m' },
+            tasksCompletedLabel: { type: 'string', example: '0/3' },
+          },
+        },
+        doneTasks: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/ManagerStaffReportTask' },
+        },
+        pendingTasks: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/ManagerStaffReportTask' },
+        },
+        activityTimeline: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              label: { type: 'string' },
+              value: { type: 'integer' },
+            },
+          },
+        },
+      },
+    },
+    AssignTeamTasksRequest: {
+      type: 'object',
+      required: ['tasks'],
+      properties: {
+        tasks: {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'object',
+            required: ['title'],
+            properties: {
+              task_template_id: { oneOf: [{ type: 'integer' }, { type: 'string', format: 'uuid' }], nullable: true },
+              title: { type: 'string' },
+              description: { type: 'string', nullable: true },
+              due_date: { type: 'string', format: 'date-time', nullable: true },
+            },
+          },
+        },
+        assignedTo: { oneOf: [{ type: 'integer' }, { type: 'string', format: 'uuid' }], nullable: true },
+      },
+    },
     TaskTemplate: {
       type: 'object',
       properties: {
@@ -663,6 +910,116 @@ const components = {
         name: { type: 'string', example: 'Setup stage lighting' },
         description: { type: 'string' },
         category: { type: 'string', example: 'Setup' },
+      },
+    },
+    FeedbackQuestion: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        uuid: { type: 'string', format: 'uuid' },
+        questionText: { type: 'string', example: 'How was the food quality?' },
+        questionType: { type: 'string', enum: ['rating', 'text', 'single_choice', 'multiple_choice', 'yes_no'] },
+        options: { type: 'array', items: { type: 'string' }, nullable: true, example: ['Excellent', 'Good', 'Average', 'Poor'] },
+        isRequired: { type: 'boolean' },
+        sortOrder: { type: 'integer' },
+        isActive: { type: 'boolean' },
+        eventId: { type: 'string', nullable: true, description: 'Null for global questions' },
+        createdAt: { type: 'string', format: 'date-time' },
+        updatedAt: { type: 'string', format: 'date-time' },
+      },
+    },
+    FeedbackQuestionList: {
+      type: 'array',
+      items: { $ref: '#/components/schemas/FeedbackQuestion' },
+    },
+    CreateFeedbackQuestionRequest: {
+      type: 'object',
+      required: ['questionText', 'questionType'],
+      properties: {
+        questionText: { type: 'string', example: 'How was the service?' },
+        questionType: { type: 'string', enum: ['rating', 'text', 'single_choice', 'multiple_choice', 'yes_no'] },
+        options: { type: 'array', items: { type: 'string' }, example: ['Yes', 'No'] },
+        isRequired: { type: 'boolean', default: true },
+        sortOrder: { type: 'integer', default: 0 },
+        isActive: { type: 'boolean', default: true },
+        eventId: { type: 'string', nullable: true, description: 'Omit or null for global questions' },
+      },
+    },
+    UpdateFeedbackQuestionRequest: {
+      type: 'object',
+      properties: {
+        questionText: { type: 'string' },
+        questionType: { type: 'string', enum: ['rating', 'text', 'single_choice', 'multiple_choice', 'yes_no'] },
+        options: { type: 'array', items: { type: 'string' } },
+        isRequired: { type: 'boolean' },
+        sortOrder: { type: 'integer' },
+        isActive: { type: 'boolean' },
+        eventId: { type: 'string', nullable: true },
+      },
+    },
+    ReorderFeedbackQuestionsRequest: {
+      type: 'object',
+      required: ['items'],
+      properties: {
+        items: {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'object',
+            required: ['id', 'sortOrder'],
+            properties: {
+              id: { $ref: '#/components/schemas/IdParam' },
+              sortOrder: { type: 'integer', minimum: 0 },
+            },
+          },
+        },
+      },
+    },
+    SubmitFeedbackQuestionnaireRequest: {
+      type: 'object',
+      required: ['eventId', 'answers'],
+      properties: {
+        eventId: { $ref: '#/components/schemas/IdParam' },
+        clientName: { type: 'string', example: 'John Doe' },
+        tableNo: { type: 'string', example: 'T-12' },
+        answers: {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'object',
+            required: ['questionId'],
+            properties: {
+              questionId: { $ref: '#/components/schemas/IdParam' },
+              answerText: { type: 'string', example: 'Excellent' },
+              answerRating: { type: 'number', minimum: 1, maximum: 5, example: 4.5 },
+              answerOptions: { type: 'array', items: { type: 'string' } },
+            },
+          },
+        },
+      },
+    },
+    FeedbackSubmission: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        uuid: { type: 'string', format: 'uuid' },
+        eventId: { type: 'string' },
+        clientName: { type: 'string', nullable: true },
+        tableNo: { type: 'string', nullable: true },
+        responses: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              questionId: { type: 'string' },
+              answerText: { type: 'string', nullable: true },
+              answerRating: { type: 'number', nullable: true },
+              answerOptions: { type: 'array', items: { type: 'string' }, nullable: true },
+            },
+          },
+        },
+        createdAt: { type: 'string', format: 'date-time' },
       },
     },
     AssignTasksRequest: {
@@ -795,9 +1152,29 @@ const components = {
       properties: {
         tableNumber: { type: 'integer' },
         allocationType: { type: 'string', enum: ['dining', 'captain'] },
+        staffId: { oneOf: [{ type: 'integer' }, { type: 'string', format: 'uuid' }], nullable: true, description: 'Manager staff assigned to this table' },
+        staffName: { type: 'string', nullable: true, description: 'Assigned manager name (read-only)' },
         userCode: { type: 'string', nullable: true },
         description: { type: 'string', nullable: true },
         eventLabel: { type: 'string', nullable: true },
+        isAssigned: { type: 'boolean', description: 'True when a manager or user code is set (read-only)' },
+      },
+    },
+    AssignTableManagerRequest: {
+      type: 'object',
+      required: ['staffId'],
+      properties: {
+        staffId: { oneOf: [{ type: 'integer' }, { type: 'string', format: 'uuid' }], description: 'Event manager to assign to the selected table' },
+        allocationType: { type: 'string', enum: ['dining', 'captain'], default: 'dining', description: 'Use `dining` for Table View, `captain` for Captain View' },
+      },
+    },
+    AssignManagerTablesRequest: {
+      type: 'object',
+      required: ['staffId', 'tableNumbers'],
+      properties: {
+        staffId: { oneOf: [{ type: 'integer' }, { type: 'string', format: 'uuid' }], description: 'Manager staff ID (numeric or UUID)' },
+        tableNumbers: { type: 'array', minItems: 1, items: { type: 'integer', minimum: 1 }, example: [1, 2, 3] },
+        allocationType: { type: 'string', enum: ['dining', 'captain'], default: 'dining' },
       },
     },
     BulkTablesRequest: {
@@ -1011,6 +1388,14 @@ const components = {
         originalName: { type: 'string' },
         reportId: { type: 'string' },
         setAsBrideGroomPhoto: { type: 'boolean' },
+      },
+    },
+    ReportPhotoDeleteResponse: {
+      type: 'object',
+      properties: {
+        photoId: { type: 'string' },
+        reportId: { type: 'string' },
+        deleted: { type: 'boolean', example: true },
       },
     },
     ReportShareResponse: {

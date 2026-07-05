@@ -26,7 +26,7 @@ const reportPaths = {
   '/report/create': {
     post: op('post', ['Report Builder'], 'Create report', {
       operationId: 'reportCreate',
-      description: 'Create a new menu report for an event. One report per event is allowed.',
+      description: 'Create a menu report for an event, or return the existing report if one already exists (one report per event).',
       requestBody: jsonBody('CreateReportRequest'),
       created: true,
       responseSchema: 'ReportDetail',
@@ -55,6 +55,14 @@ const reportPaths = {
       },
       created: true,
       responseSchema: 'ReportPhotoUploadResponse',
+    }),
+  },
+  '/report/photo/{photoId}': {
+    delete: op('delete', ['Report Builder'], 'Delete report photo', {
+      operationId: 'reportDeletePhoto',
+      description: 'Soft-deletes a report photo. Clears `brideGroomPhotoUrl` when the deleted photo was set as the bride/groom image.',
+      parameters: [idParam('photoId', 'Report photo ID')],
+      responseSchema: 'ReportPhotoDeleteResponse',
     }),
   },
   '/report/template/select': {

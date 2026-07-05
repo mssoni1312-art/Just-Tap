@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const tableRepository = require('./table.repository');
 
 const TEAM_TYPES = {
   justTap: {
@@ -65,6 +66,7 @@ const fetchStaffTasks = async () => {
        s.id,
        s.name,
        s.role,
+       s.designation,
        s.is_active AS isActive,
        et.id AS taskId,
        et.title,
@@ -95,7 +97,7 @@ const fetchStaffTasks = async () => {
       grouped.set(staffId, {
         id: staffId,
         name: row.name,
-        role: formatRole(row.role),
+        role: row.designation?.trim() || formatRole(row.role),
         isActive: Boolean(row.isActive),
         tasks: [],
       });
@@ -118,6 +120,63 @@ const fetchStaffTasks = async () => {
 };
 
 const teamAllocationRepository = {
+  async findStaffById(staffId) {
+    const [rows] = await pool.execute(
+      `SELECT id, name, role, is_active AS isActive
+       FROM staff
+       WHERE id = ?
+         AND deleted_at IS NULL
+         AND role = 'event_manager'
+       LIMIT 1`,
+      [staffId]
+    );
+    return rows[0] || null;
+  },
+
+  async resolveEventForStaff(staffId) {
+    const [rows] = await pool.execute(
+      `SELECT e.id
+       FROM events e
+       LEFT JOIN event_manager_allocations ema
+         ON ema.event_id = e.id
+         AND ema.staff_id = ?
+         AND ema.deleted_at IS NULL
+       WHERE e.deleted_at IS NULL
+         AND (e.assigned_manager_id = ? OR ema.id IS NOT NULL)
+       ORDER BY
+         CASE
+           WHEN e.status = 'live' THEN 0
+           WHEN e.status = 'confirmed' THEN 1
+           ELSE 2
+         END,
+         e.start_date DESC,
+         e.id DESC
+       LIMIT 1`,
+      [staffId, staffId]
+    );
+
+    if (rows[0]?.id) {
+      return rows[0].id;
+    }
+
+    const [fallbackRows] = await pool.execute(
+      `SELECT id
+       FROM events
+       WHERE deleted_at IS NULL
+       ORDER BY
+         CASE
+           WHEN status = 'live' THEN 0
+           WHEN status = 'confirmed' THEN 1
+           ELSE 2
+         END,
+         start_date DESC,
+         id DESC
+       LIMIT 1`
+    );
+
+    return fallbackRows[0]?.id || null;
+  },
+
   async getAllocation(teamType) {
     const staffMembers = await fetchStaffTasks();
     const members = staffMembers
@@ -249,6 +308,19 @@ const teamAllocationRepository = {
         value,
       }));
 
+    const eventId = await this.resolveEventForStaff(staffId);
+    const managerTables = await tableRepository.findForManagerReport(
+      staffId,
+      staff.name,
+      eventId
+    );
+    const assignedTables = managerTables.map((table) => {
+      if (table.allocationType === 'captain') {
+        return `Captain ${table.tableNumber}`;
+      }
+      return `Table ${table.tableNumber}`;
+    });
+
     return {
       manager: {
         id: String(staff.id),
@@ -257,6 +329,7 @@ const teamAllocationRepository = {
         isActive: Boolean(staff.isActive),
       },
       efficiencyScore,
+      assignedTables,
       stats: {
         interactions: completedCount,
         filesCaptured: pending.filter((task) =>

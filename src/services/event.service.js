@@ -49,6 +49,43 @@ const toMysqlTime = (value) => {
   return trimmed;
 };
 
+const splitDateTime = (value) => {
+  if (!value) return { date: null, time: null };
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return { date: null, time: null };
+    const pad = (n) => String(n).padStart(2, '0');
+    return {
+      date: `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`,
+      time: `${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`,
+    };
+  }
+  const str = String(value);
+  if (str.includes('T')) {
+    const [date, timePart] = str.split('T');
+    const time = timePart ? timePart.replace(/Z$/, '').slice(0, 8) : null;
+    return { date, time };
+  }
+  return { date: str.slice(0, 10), time: null };
+};
+
+const normalizeFunctionInput = (fn) => {
+  if (fn.startDateTime || fn.endDateTime) {
+    const start = splitDateTime(fn.startDateTime);
+    const end = splitDateTime(fn.endDateTime);
+    return {
+      name: fn.name,
+      venue: fn.venue,
+      date: start.date || fn.date,
+      startTime: start.time || fn.startTime,
+      endTime: end.time || fn.endTime,
+      pax: fn.pax,
+      subVenueRemarks: fn.subVenueRemarks,
+      rate: fn.rate,
+    };
+  }
+  return fn;
+};
+
 async function resolveAssignedManagers(data) {
   const managerIds = data.justTapInformation?.assignedManagerIds ?? data.assignedManagerIds;
   const managerId = data.justTapInformation?.assignedManagerId ?? data.assignedManagerId;
@@ -110,6 +147,7 @@ function enrichTabFourResponse(event, {
 
 async function resolveClientDetails(data) {
   const hasClientId = data.clientId !== undefined && data.clientId !== null && data.clientId !== '';
+  const clientAddress = data.clientAddress || data.catererName || null;
 
   if (hasClientId) {
     const clientId = await resolveId('clients', data.clientId);
@@ -121,6 +159,7 @@ async function resolveClientDetails(data) {
       clientMobile: data.clientMobile ?? client.contact_no,
       cityName: data.cityName || client.city_name,
       catererName: data.catererName || client.caterer_name,
+      clientAddress: clientAddress || client.client_address || client.caterer_name,
       reference: data.reference || client.reference,
       isHighPriority: data.isHighPriority ?? Boolean(client.is_high_priority),
     };
@@ -128,7 +167,8 @@ async function resolveClientDetails(data) {
 
   const clientId = await clientRepository.create({
     name: data.clientName,
-    caterer_name: data.catererName,
+    caterer_name: data.catererName || clientAddress || data.clientName,
+    client_address: clientAddress,
     city_name: data.cityName,
     contact_no: data.clientMobile,
     reference: data.reference,
@@ -140,7 +180,8 @@ async function resolveClientDetails(data) {
     clientName: data.clientName,
     clientMobile: data.clientMobile,
     cityName: data.cityName,
-    catererName: data.catererName,
+    catererName: data.catererName || clientAddress || data.clientName,
+    clientAddress,
     reference: data.reference,
     isHighPriority: Boolean(data.isHighPriority),
   };
@@ -233,6 +274,7 @@ const eventService = {
       client_name: clientDetails.clientName,
       client_mobile: clientDetails.clientMobile,
       caterer_name: clientDetails.catererName,
+      client_address: clientDetails.clientAddress,
       reference: clientDetails.reference,
       is_high_priority: clientDetails.isHighPriority,
       venue_name: data.venueName,
@@ -245,6 +287,8 @@ const eventService = {
       package_id: packageId,
       assigned_manager_id: managerAssignment?.assignedManagerId ?? null,
       is_live: data.status === 'live',
+      tablet_service: data.tabletService,
+      media_client_address: data.mediaClientAddress,
       justTapInformation: data.justTapInformation,
       photographyVideography: data.photographyVideography,
       justSocialInformation: data.justSocialInformation,
@@ -265,7 +309,8 @@ const eventService = {
     }
 
     if (data.functions?.length) {
-      for (const [i, fn] of data.functions.entries()) {
+      for (const [i, rawFn] of data.functions.entries()) {
+        const fn = normalizeFunctionInput(rawFn);
         await eventRepository.addFunction(eventId, {
           name: fn.name,
           venue: fn.venue,
@@ -273,6 +318,7 @@ const eventService = {
           start_time: toMysqlTime(fn.startTime),
           end_time: toMysqlTime(fn.endTime),
           pax: fn.pax,
+          sub_venue_remarks: fn.subVenueRemarks,
           rate: fn.rate,
           sort_order: i,
         });
@@ -317,6 +363,7 @@ const eventService = {
       client_name: data.clientName,
       client_mobile: data.clientMobile,
       caterer_name: data.catererName,
+      client_address: data.clientAddress,
       reference: data.reference,
       is_high_priority: data.isHighPriority,
       venue_name: data.venueName,
@@ -329,6 +376,8 @@ const eventService = {
       package_id: data.packageId,
       assigned_manager_id: managerAssignment?.assignedManagerId,
       is_live: data.status === 'live',
+      tablet_service: data.tabletService,
+      media_client_address: data.mediaClientAddress,
       justTapInformation: data.justTapInformation,
       photographyVideography: data.photographyVideography,
       justSocialInformation: data.justSocialInformation,
@@ -386,14 +435,16 @@ const eventService = {
     const eventId = await resolveId('events', eventIdOrUuid);
     const event = await eventRepository.findById(eventId);
     if (!event) throw new AppError('Event not found', 404);
+    const fn = normalizeFunctionInput(data);
     const functionId = await eventRepository.addFunction(eventId, {
-      name: data.name,
-      venue: data.venue,
-      function_date: data.date,
-      start_time: toMysqlTime(data.startTime),
-      end_time: toMysqlTime(data.endTime),
-      pax: data.pax,
-      rate: data.rate,
+      name: fn.name,
+      venue: fn.venue,
+      function_date: fn.date,
+      start_time: toMysqlTime(fn.startTime),
+      end_time: toMysqlTime(fn.endTime),
+      pax: fn.pax,
+      sub_venue_remarks: fn.subVenueRemarks,
+      rate: fn.rate,
     });
     const functions = await eventRepository.getFunctions(eventId);
     return functions.find((f) => f.id === functionId) || { id: functionId };
@@ -401,14 +452,16 @@ const eventService = {
 
   async updateFunction(eventIdOrUuid, functionId, data) {
     const eventId = await resolveId('events', eventIdOrUuid);
+    const fn = normalizeFunctionInput(data);
     await eventRepository.updateFunction(eventId, functionId, {
-      name: data.name,
-      venue: data.venue,
-      function_date: data.date,
-      start_time: toMysqlTime(data.startTime),
-      end_time: toMysqlTime(data.endTime),
-      pax: data.pax,
-      rate: data.rate,
+      name: fn.name,
+      venue: fn.venue,
+      function_date: fn.date,
+      start_time: toMysqlTime(fn.startTime),
+      end_time: toMysqlTime(fn.endTime),
+      pax: fn.pax,
+      sub_venue_remarks: fn.subVenueRemarks,
+      rate: fn.rate,
     });
     const functions = await eventRepository.getFunctions(eventId);
     return functions.find((f) => f.id === Number(functionId));

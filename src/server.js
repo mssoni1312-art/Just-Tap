@@ -21,7 +21,8 @@ async function start() {
   const HOST = process.env.HOST || '0.0.0.0';
   const server = app.listen(PORT, HOST, () => {
     logger.info(`Just Tap API running on ${HOST}:${PORT}`);
-    logger.info(`Swagger docs: http://localhost:${PORT}/api/docs`);
+    logger.info(`Admin Swagger: http://localhost:${PORT}/api/docs`);
+    logger.info(`Manager Swagger: http://localhost:${PORT}/api/manager/docs`);
     logger.info(`Health: http://localhost:${PORT}/health`);
     logger.info(`Readiness: http://localhost:${PORT}/health/ready`);
     logger.info(`Liveness: http://localhost:${PORT}/health/live`);

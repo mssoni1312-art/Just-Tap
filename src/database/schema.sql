@@ -251,6 +251,7 @@ CREATE TABLE IF NOT EXISTS clients (
   uuid             CHAR(36)        NOT NULL DEFAULT (UUID()),
   name             VARCHAR(150)    NOT NULL,
   caterer_name     VARCHAR(150)    NOT NULL,
+  client_address   VARCHAR(255)    NULL,
   city_name        VARCHAR(100)    NOT NULL,
   contact_no       VARCHAR(20)     NULL,
   reference        VARCHAR(150)    NOT NULL,
@@ -300,6 +301,7 @@ CREATE TABLE IF NOT EXISTS events (
   client_name          VARCHAR(150)    NOT NULL,
   client_mobile        VARCHAR(20)     NULL,
   caterer_name         VARCHAR(150)    NULL,
+  client_address       VARCHAR(255)    NULL,
   reference            VARCHAR(150)    NULL,
   is_high_priority     TINYINT(1)      NOT NULL DEFAULT 0,
   venue_name           VARCHAR(255)    NOT NULL,
@@ -315,6 +317,8 @@ CREATE TABLE IF NOT EXISTS events (
   no_of_tablets        INT UNSIGNED    NULL,
   no_of_captains       INT UNSIGNED    NULL,
   no_of_managers       INT UNSIGNED    NULL,
+  tablet_service       VARCHAR(150)    NULL,
+  media_client_address VARCHAR(255)    NULL,
   just_tap_rate        DECIMAL(12, 2)  NULL,
   has_photography_videography TINYINT(1) NOT NULL DEFAULT 0,
   photography_name     VARCHAR(150)    NULL,
@@ -330,6 +334,8 @@ CREATE TABLE IF NOT EXISTS events (
   bride_instagram_id   VARCHAR(150)    NULL,
   groom_name           VARCHAR(150)    NULL,
   groom_instagram_id   VARCHAR(150)    NULL,
+  food_notes           TEXT            NULL,
+  event_remarks        TEXT            NULL,
   total_rate           DECIMAL(12, 2)  NULL,
   discount_rate        DECIMAL(5, 2)   NULL,
   final_rate           DECIMAL(12, 2)  NULL,
@@ -385,6 +391,7 @@ CREATE TABLE IF NOT EXISTS event_functions (
   event_id      BIGINT UNSIGNED NOT NULL,
   name          VARCHAR(150)    NOT NULL,
   venue         VARCHAR(255)    NULL,
+  sub_venue_remarks VARCHAR(255) NULL,
   function_date DATE            NULL,
   start_time    TIME            NULL,
   end_time      TIME            NULL,
@@ -430,6 +437,7 @@ CREATE TABLE IF NOT EXISTS event_table_assignments (
   event_id        BIGINT UNSIGNED NOT NULL,
   table_number    INT UNSIGNED    NOT NULL,
   allocation_type ENUM('dining', 'captain') NOT NULL DEFAULT 'dining',
+  staff_id        BIGINT UNSIGNED NULL,
   user_code       VARCHAR(50)     NULL,
   description     TEXT            NULL,
   event_label     VARCHAR(255)    NULL,
@@ -439,9 +447,12 @@ CREATE TABLE IF NOT EXISTS event_table_assignments (
   PRIMARY KEY (id),
   UNIQUE KEY uk_event_table_alloc (event_id, table_number, allocation_type),
   KEY idx_eta_event (event_id),
+  KEY idx_eta_staff (staff_id),
   KEY idx_eta_deleted_at (deleted_at),
   CONSTRAINT fk_eta_event
     FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE,
+  CONSTRAINT fk_eta_staff
+    FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE SET NULL,
   CONSTRAINT chk_eta_table_number CHECK (table_number > 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -1133,4 +1144,55 @@ CREATE TABLE IF NOT EXISTS report_pdf (
 USE justtap;
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- Migration 025: Manager "All Tasks" screen progress per event
+
+CREATE TABLE IF NOT EXISTS event_all_tasks (
+  id                              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  event_id                        BIGINT UNSIGNED NOT NULL,
+  status                          ENUM('in_progress', 'completed', 'abandoned') NOT NULL DEFAULT 'in_progress',
+  actual_arrival_time             TIME            NULL,
+  followers_achieved_count        INT UNSIGNED    NOT NULL DEFAULT 0,
+  testimonial_reels_achieved_count INT UNSIGNED   NOT NULL DEFAULT 0,
+  active_session_recording        TINYINT(1)      NOT NULL DEFAULT 0,
+  number_of_video_shoots          INT UNSIGNED    NOT NULL DEFAULT 0,
+  main_event_highlights           TINYINT(1)      NOT NULL DEFAULT 0,
+  photos_captured                 INT UNSIGNED    NOT NULL DEFAULT 0,
+  amount_collected                DECIMAL(12, 2)  NOT NULL DEFAULT 0,
+  completed_at                    DATETIME        NULL,
+  abandoned_at                    DATETIME        NULL,
+  created_at                      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at                      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at                      DATETIME        NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_event_all_tasks_event (event_id),
+  KEY idx_event_all_tasks_status (status),
+  KEY idx_event_all_tasks_deleted_at (deleted_at),
+  CONSTRAINT fk_event_all_tasks_event
+    FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS event_all_task_attachments (
+  id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  uuid          CHAR(36)        NOT NULL DEFAULT (UUID()),
+  event_id      BIGINT UNSIGNED NOT NULL,
+  upload_id     BIGINT UNSIGNED NULL,
+  file_url      VARCHAR(500)    NOT NULL,
+  original_name VARCHAR(255)    NOT NULL,
+  mime_type     VARCHAR(100)    NULL,
+  size_bytes    INT UNSIGNED    NULL,
+  uploaded_by   BIGINT UNSIGNED NULL,
+  created_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  deleted_at    DATETIME        NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_event_all_task_attachments_uuid (uuid),
+  KEY idx_event_all_task_attachments_event (event_id),
+  KEY idx_event_all_task_attachments_deleted_at (deleted_at),
+  CONSTRAINT fk_eata_event
+    FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE,
+  CONSTRAINT fk_eata_upload
+    FOREIGN KEY (upload_id) REFERENCES uploads (id) ON DELETE SET NULL,
+  CONSTRAINT fk_eata_user
+    FOREIGN KEY (uploaded_by) REFERENCES users (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

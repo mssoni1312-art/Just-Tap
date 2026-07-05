@@ -56,7 +56,10 @@ const reportService = {
 
     const existingReportId = await reportRepository.findByEventId(eventId);
     if (existingReportId) {
-      throw new AppError('A report already exists for this event', 409);
+      return {
+        report: await reportRepository.findById(existingReportId),
+        created: false,
+      };
     }
 
     let packageId = null;
@@ -88,7 +91,10 @@ const reportService = {
       metadata: { reportId },
     });
 
-    return reportRepository.findById(reportId);
+    return {
+      report: await reportRepository.findById(reportId),
+      created: true,
+    };
   },
 
   async getById(reportIdOrUuid, userId) {
@@ -97,6 +103,31 @@ const reportService = {
     const report = await reportRepository.findById(reportId);
     if (!report) throw new AppError('Report not found', 404);
     return report;
+  },
+
+  async deletePhoto(photoId, userId) {
+    const numericPhotoId = Number(photoId);
+    if (!Number.isInteger(numericPhotoId) || numericPhotoId <= 0) {
+      throw new AppError('Photo not found', 404);
+    }
+
+    const photo = await reportRepository.findPhotoById(numericPhotoId);
+    if (!photo) throw new AppError('Photo not found', 404);
+
+    await assertReportAccess(photo.reportId, userId);
+
+    const report = await reportRepository.findById(photo.reportId);
+    if (report?.brideGroomPhotoUrl && report.brideGroomPhotoUrl === photo.imageUrl) {
+      await reportRepository.updateMaster(photo.reportId, { brideGroomPhotoUrl: null }, userId);
+    }
+
+    await reportRepository.softDeletePhoto(numericPhotoId);
+
+    return {
+      photoId: String(numericPhotoId),
+      reportId: String(photo.reportId),
+      deleted: true,
+    };
   },
 
   async uploadPhoto(reportIdOrUuid, file, userId, body = {}) {

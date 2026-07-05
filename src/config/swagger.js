@@ -1,5 +1,7 @@
-const buildOpenApiSpec = require('../docs');
+const { buildAdminOpenApiSpec, buildManagerOpenApiSpec, buildOpenApiSpec } = require('../docs');
 
-const swaggerSpec = buildOpenApiSpec();
-
-module.exports = swaggerSpec;
+module.exports = {
+  adminSwaggerSpec: buildAdminOpenApiSpec(),
+  managerSwaggerSpec: buildManagerOpenApiSpec(),
+  combinedSwaggerSpec: buildOpenApiSpec(),
+};

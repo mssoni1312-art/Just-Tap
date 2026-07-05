@@ -111,6 +111,57 @@ const feedbackRepository = {
     );
     return result.affectedRows;
   },
+
+  async findAllForManager(staffId, query) {
+    const { page, limit, offset, sortOrder } = parsePagination(query);
+    const sortBy = sanitizeSortBy('feedback', query.sortBy);
+    const conditions = ['fr.deleted_at IS NULL', 'e.deleted_at IS NULL'];
+    const params = [];
+
+    conditions.push(`(
+      e.assigned_manager_id = ?
+      OR EXISTS (
+        SELECT 1 FROM event_manager_allocations ema
+        WHERE ema.event_id = e.id AND ema.staff_id = ? AND ema.deleted_at IS NULL
+      )
+    )`);
+    params.push(staffId, staffId);
+
+    if (query.eventId) {
+      conditions.push('fr.event_id = ?');
+      params.push(query.eventId);
+    }
+    if (query.stars) {
+      conditions.push('FLOOR(fr.rating) = ?');
+      params.push(Number(query.stars));
+    }
+    if (query.sentiment) {
+      conditions.push('fr.sentiment = ?');
+      params.push(query.sentiment);
+    }
+    if (query.search) {
+      conditions.push('(fr.client_name LIKE ? OR fr.comment LIKE ?)');
+      const s = `%${query.search}%`;
+      params.push(s, s);
+    }
+
+    const where = conditions.join(' AND ');
+    const [countRows] = await pool.execute(
+      `SELECT COUNT(*) AS total FROM feedback_reviews fr
+       JOIN events e ON e.id = fr.event_id
+       WHERE ${where}`,
+      params
+    );
+    const [rows] = await pool.execute(
+      `SELECT fr.* FROM feedback_reviews fr
+       JOIN events e ON e.id = fr.event_id
+       WHERE ${where}
+       ORDER BY fr.${sortBy} ${sortOrder}
+       LIMIT ${limit} OFFSET ${offset}`,
+      params
+    );
+    return buildPaginatedResponse(rows.map(formatFeedback), countRows[0].total, page, limit);
+  },
 };
 
 module.exports = feedbackRepository;

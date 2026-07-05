@@ -1,5 +1,5 @@
 const {
-  op, jsonBody, idParam, paginationParams, exportParams, importBody, bulkIdsBody,
+  AUTH, PUBLIC, op, jsonBody, idParam, paginationParams, exportParams, importBody, bulkIdsBody,
 } = require('../helpers');
 
 const tasksPaths = {
@@ -58,6 +58,18 @@ const managerPaths = {
         { name: 'forSelect', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: 'Return all matching managers as `{ items }` without pagination' },
       ]),
       responseSchema: 'PaginatedList',
+    }),
+    post: op('post', ['Managers'], 'Allocate new manager', {
+      operationId: 'managersCreate',
+      description:
+        'Creates a new event manager (`staff` with role `event_manager`) from the **Allocate New Member** modal. Send `memberName` and `designation`.',
+      requestBody: jsonBody('CreateManagerRequest', true, {
+        memberName: 'Julian Reed',
+        designation: 'Content Strategist',
+      }),
+      responseSchema: 'Staff',
+      successDescription: 'Manager created',
+      created: true,
     }),
   },
 };
@@ -196,6 +208,85 @@ const feedbackPaths = {
   },
 };
 
+const feedbackQuestionPaths = {
+  '/feedback-questions': {
+    get: op('get', ['Feedback Questionnaire'], 'List feedback questions', {
+      operationId: 'feedbackQuestionsList',
+      description: 'List admin-managed dynamic feedback questions. Filter by eventId for event-specific questions, or scope=global for global questions.',
+      parameters: paginationParams([
+        { name: 'eventId', in: 'query', schema: { type: 'string' }, description: 'Filter by event ID or UUID' },
+        { name: 'scope', in: 'query', schema: { type: 'string', enum: ['global'] }, description: 'Return only global questions (no event)' },
+        { name: 'isActive', in: 'query', schema: { type: 'boolean' } },
+      ]),
+      responseSchema: 'PaginatedList',
+    }),
+    post: op('post', ['Feedback Questionnaire'], 'Create feedback question', {
+      operationId: 'feedbackQuestionsCreate',
+      requestBody: jsonBody('CreateFeedbackQuestionRequest'),
+      responseSchema: 'FeedbackQuestion',
+      successDescription: 'Question created',
+    }),
+  },
+  '/feedback-questions/reorder': {
+    patch: op('patch', ['Feedback Questionnaire'], 'Reorder feedback questions', {
+      operationId: 'feedbackQuestionsReorder',
+      requestBody: jsonBody('ReorderFeedbackQuestionsRequest'),
+      successDescription: 'Questions reordered',
+    }),
+  },
+  '/feedback-questions/bulk-delete': {
+    post: op('post', ['Feedback Questionnaire'], 'Bulk delete feedback questions', {
+      operationId: 'feedbackQuestionsBulkDelete',
+      requestBody: bulkIdsBody(),
+    }),
+  },
+  '/feedback-questions/{id}': {
+    get: op('get', ['Feedback Questionnaire'], 'Get feedback question by ID', {
+      operationId: 'feedbackQuestionsGetById',
+      parameters: [idParam()],
+      responseSchema: 'FeedbackQuestion',
+    }),
+    patch: op('patch', ['Feedback Questionnaire'], 'Update feedback question', {
+      operationId: 'feedbackQuestionsUpdate',
+      parameters: [idParam()],
+      requestBody: jsonBody('UpdateFeedbackQuestionRequest'),
+      responseSchema: 'FeedbackQuestion',
+    }),
+    delete: op('delete', ['Feedback Questionnaire'], 'Delete feedback question', {
+      operationId: 'feedbackQuestionsDelete',
+      parameters: [idParam()],
+    }),
+  },
+  '/public/feedback-questions': {
+    get: op('get', ['Feedback Questionnaire'], 'Get active feedback questions (public)', {
+      operationId: 'publicFeedbackQuestionsList',
+      security: PUBLIC,
+      description: 'Public endpoint for guest/consumer app. Returns active global + event-specific questions ordered by sortOrder.',
+      parameters: [
+        { name: 'eventId', in: 'query', required: true, schema: { type: 'string' }, description: 'Event ID or UUID' },
+      ],
+      responseSchema: 'FeedbackQuestionList',
+    }),
+  },
+  '/public/events/{eventId}/feedback-questions': {
+    get: op('get', ['Feedback Questionnaire'], 'Get active feedback questions for event (public)', {
+      operationId: 'publicEventFeedbackQuestionsList',
+      security: PUBLIC,
+      parameters: [idParam('eventId')],
+      responseSchema: 'FeedbackQuestionList',
+    }),
+  },
+  '/public/feedback-submissions': {
+    post: op('post', ['Feedback Questionnaire'], 'Submit feedback questionnaire responses (public)', {
+      operationId: 'publicFeedbackSubmissionsCreate',
+      security: PUBLIC,
+      requestBody: jsonBody('SubmitFeedbackQuestionnaireRequest'),
+      responseSchema: 'FeedbackSubmission',
+      successDescription: 'Feedback submitted',
+    }),
+  },
+};
+
 const ordersPaths = {
   '/orders/items/{lineItemId}': {
     get: op('get', ['Orders'], 'Get order line item detail', {
@@ -312,6 +403,54 @@ const miscPaths = {
   },
 };
 
+const teamTypeParam = {
+  name: 'teamType',
+  in: 'path',
+  required: true,
+  schema: { type: 'string', enum: ['justTap', 'justSocial', 'photoVideo'] },
+  description: 'Team allocation board (`justTap`, `justSocial`, or `photoVideo`)',
+};
+
+const staffIdParam = {
+  name: 'staffId',
+  in: 'path',
+  required: true,
+  schema: { $ref: '#/components/schemas/IdParam' },
+  description: 'Manager staff ID (numeric or UUID)',
+};
+
+const teamAllocationPaths = {
+  '/team-allocations/{teamType}': {
+    get: op('get', ['Team Allocation'], 'List team allocation board', {
+      operationId: 'teamAllocationsGet',
+      description:
+        'Returns event managers on the team allocation board for the given team type, including assignment pill labels per member.',
+      parameters: [teamTypeParam],
+      responseSchema: 'TeamAllocationSummary',
+    }),
+  },
+  '/team-allocations/{teamType}/staff/{staffId}/report': {
+    get: op('get', ['Team Allocation'], 'Manager report (manager details screen)', {
+      operationId: 'teamAllocationStaffReport',
+      description:
+        'Returns the **Manager Report** screen payload for a manager staff member: profile, efficiency score, stats, **assignedTables** (table numbers assigned to this manager via the "Select tables to assign" screen), done/pending tasks, and activity timeline. Task metrics are filtered by team type.',
+      parameters: [teamTypeParam, staffIdParam],
+      responseSchema: 'ManagerStaffReport',
+      successDescription: 'Manager report with assigned table list',
+    }),
+  },
+  '/team-allocations/{teamType}/staff/{staffId}/tasks/assign': {
+    post: op('post', ['Team Allocation'], 'Assign tasks to manager from allocation board', {
+      operationId: 'teamAllocationAssignTasks',
+      parameters: [teamTypeParam, staffIdParam],
+      requestBody: jsonBody('AssignTeamTasksRequest', true, {
+        tasks: [{ title: 'Just Social', description: 'Promote on Instagram', due_date: '2026-07-10' }],
+      }),
+      successDescription: 'Tasks assigned to manager for their active event',
+    }),
+  },
+};
+
 module.exports = {
   tasksPaths,
   managerPaths,
@@ -319,7 +458,9 @@ module.exports = {
   captainPaths,
   staffPaths,
   feedbackPaths,
+  feedbackQuestionPaths,
   ordersPaths,
   activityPaths,
   miscPaths,
+  teamAllocationPaths,
 };

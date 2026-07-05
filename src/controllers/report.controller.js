@@ -6,8 +6,15 @@ const fs = require('fs');
 module.exports = {
   meta: async (_req, res) => sendSuccess(res, reportService.getMeta()),
   listTemplates: async (req, res) => sendSuccess(res, await reportService.listTemplates(req.query)),
-  create: async (req, res) =>
-    sendSuccess(res, await reportService.create(req.body, req.user.id), 'Report created', 201),
+  create: async (req, res) => {
+    const { report, created } = await reportService.create(req.body, req.user.id);
+    return sendSuccess(
+      res,
+      report,
+      created ? 'Report created' : 'Report retrieved',
+      created ? 201 : 200,
+    );
+  },
   getById: async (req, res) => sendSuccess(res, await reportService.getById(req.params.id, req.user.id)),
   uploadPhoto: async (req, res) =>
     sendSuccess(
@@ -15,6 +22,12 @@ module.exports = {
       await reportService.uploadPhoto(req.body.reportId, req.file, req.user.id, req.body),
       'Photo uploaded',
       201,
+    ),
+  deletePhoto: async (req, res) =>
+    sendSuccess(
+      res,
+      await reportService.deletePhoto(req.params.photoId, req.user.id),
+      'Photo deleted',
     ),
   selectTemplate: async (req, res) =>
     sendSuccess(res, await reportService.selectTemplate(req.body.reportId, req.body, req.user.id), 'Template selected'),

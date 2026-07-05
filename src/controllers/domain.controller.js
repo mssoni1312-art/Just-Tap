@@ -16,6 +16,26 @@ module.exports = {
     get: async (req, res) => sendSuccess(res, await tableService.getTables(req.params.eventId)),
     bulkSave: async (req, res) => sendSuccess(res, await tableService.bulkSave(req.params.eventId, req.body.assignments)),
     assign: async (req, res) => sendSuccess(res, await tableService.assignSingle(req.params.eventId, req.params.tableNumber, req.body)),
+    assignTableManager: async (req, res) => sendSuccess(
+      res,
+      await tableService.assignTableToManager(
+        req.params.eventId,
+        Number(req.params.tableNumber),
+        req.body.staffId,
+        req.body.allocationType
+      ),
+      'Manager assigned to table'
+    ),
+    assignManager: async (req, res) => sendSuccess(
+      res,
+      await tableService.assignTablesToManager(
+        req.params.eventId,
+        req.body.staffId,
+        req.body.tableNumbers,
+        req.body.allocationType
+      ),
+      'Tables assigned to manager'
+    ),
     allocate: async (req, res) => sendSuccess(res, await tableService.saveAllocation(req.params.eventId, req.body)),
   },
   order: {

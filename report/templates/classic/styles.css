@@ -1,34 +1,29 @@
-.page-header,
-.page-footer {
-  padding: 10mm 14mm 0;
+.report-overlay {
+  background: rgba(255, 254, 248, 0.15);
 }
 
-.cover-page {
-  background: #fffef8;
-  color: #2c2416;
+.frame-outer,
+.frame-inner,
+.heading-line,
+.name-rule {
+  border-color: #c9a227;
+  background: #c9a227;
 }
 
-.cover-title,
-.header-title,
-.section-title {
+.presents,
+.couple-name,
+.category-title {
   color: #8b6914;
 }
 
-.cover-page .page-content {
-  border: 2px double #c9a227;
-  margin: 14mm;
-  padding: 18mm;
-}
-
-.couple-photo,
-.gallery-item {
-  border: 1px solid #c9a227;
-}
-
-.menu-item-name {
+.item-name {
   color: #2c2416;
 }
 
-.footer-brand {
-  color: #8b6914;
+.item-desc {
+  color: #6b5a3e;
+}
+
+.event-date {
+  color: #2c2416;
 }
