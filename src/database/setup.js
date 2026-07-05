@@ -19,15 +19,47 @@ async function getConnection() {
 }
 
 async function ensureDatabase(connection) {
-  const files = fs.readdirSync(MIGRATIONS_DIR)
-    .filter((f) => f.endsWith('.sql'))
-    .sort();
-  const bootstrap = files.find((f) => f.startsWith('000_'));
-  if (bootstrap) {
-    const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, bootstrap), 'utf8');
-    await connection.query(sql);
-  }
+  await connection.query(
+    `CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+  );
   await connection.query(`USE \`${DB_NAME}\``);
+  await connection.query('SET NAMES utf8mb4');
+  await connection.query('SET FOREIGN_KEY_CHECKS = 0');
+}
+
+async function tableExists(connection, tableName) {
+  const [rows] = await connection.query(
+    `SELECT COUNT(*) AS count FROM information_schema.tables
+     WHERE table_schema = ? AND table_name = ?`,
+    [DB_NAME, tableName],
+  );
+  return Number(rows[0].count) > 0;
+}
+
+async function reconcileSchemaState(connection) {
+  await connection.query(`USE \`${DB_NAME}\``);
+
+  const hasMigrationsTable = await tableExists(connection, 'schema_migrations');
+  if (!hasMigrationsTable) {
+    return;
+  }
+
+  const applied = await getAppliedFiles(connection, 'schema_migrations');
+  if (applied.size === 0) {
+    return;
+  }
+
+  const hasUsers = await tableExists(connection, 'users');
+  if (hasUsers) {
+    return;
+  }
+
+  console.warn(
+    `Schema drift detected: ${applied.size} migrations recorded in \`${DB_NAME}\` but core tables are missing.`,
+  );
+  console.warn('Resetting migration and seeder tracking, then reapplying...');
+  await connection.query('DROP TABLE IF EXISTS schema_seeders');
+  await connection.query('DROP TABLE IF EXISTS schema_migrations');
 }
 
 async function ensureTrackingTable(connection, tableName) {
@@ -110,7 +142,9 @@ async function runSqlFiles(connection, { dir, tableName, label, transform }) {
       sql = await transform(file, sql);
     }
 
-    await executeSqlFile(connection, file, sql);
+    if (sql.trim()) {
+      await executeSqlFile(connection, file, sql);
+    }
     await connection.query(`USE \`${DB_NAME}\``);
     await recordApplied(connection, tableName, file);
     console.log(`  ✓ ${file}`);
@@ -118,11 +152,17 @@ async function runSqlFiles(connection, { dir, tableName, label, transform }) {
 }
 
 async function runMigrations(connection) {
+  await reconcileSchemaState(connection);
   await runSqlFiles(connection, {
     dir: MIGRATIONS_DIR,
     tableName: 'schema_migrations',
     label: 'migrations',
-    transform: async (_file, sql) => stripUseDatabase(sql),
+    transform: async (file, sql) => {
+      if (file.startsWith('000_')) {
+        return '';
+      }
+      return stripUseDatabase(sql);
+    },
   });
 }
 
@@ -132,13 +172,14 @@ async function runSeeders(connection) {
     tableName: 'schema_seeders',
     label: 'seeders',
     transform: async (file, sql) => {
+      let transformed = stripUseDatabase(sql);
       if (file.includes('super_admin')) {
         const hash = await bcrypt.hash('admin123', 12);
-        return sql.replace(/__BCRYPT_HASH__/g, hash);
+        transformed = transformed.replace(/__BCRYPT_HASH__/g, hash);
       }
       if (file.includes('manager_users')) {
         const hash = await bcrypt.hash('manager123', 12);
-        return sql.replace(/__BCRYPT_HASH__/g, hash);
+        transformed = transformed.replace(/__BCRYPT_HASH__/g, hash);
       }
       if (file.includes('auth_tokens')) {
         const [resetActive, resetUsed, otpPending, otpVerified] = await Promise.all([
@@ -147,13 +188,13 @@ async function runSeeders(connection) {
           bcrypt.hash('123456', 12),
           bcrypt.hash('654321', 12),
         ]);
-        return sql
+        transformed = transformed
           .replace(/__RESET_TOKEN_HASH_ACTIVE__/g, resetActive)
           .replace(/__RESET_TOKEN_HASH_USED__/g, resetUsed)
           .replace(/__OTP_CODE_HASH_PENDING__/g, otpPending)
           .replace(/__OTP_CODE_HASH_VERIFIED__/g, otpVerified);
       }
-      return sql;
+      return transformed;
     },
   });
 }
@@ -161,6 +202,7 @@ async function runSeeders(connection) {
 async function setup({ seed = true } = {}) {
   const connection = await getConnection();
   try {
+    console.log(`Using database: ${DB_NAME}`);
     await ensureDatabase(connection);
     await runMigrations(connection);
     if (seed) {
@@ -177,7 +219,7 @@ async function migrate() {
   try {
     await ensureDatabase(connection);
     await runMigrations(connection);
-    console.log('Migrations complete.');
+    console.log(`Migrations complete (database: ${DB_NAME}).`);
   } finally {
     await connection.end();
   }
@@ -187,8 +229,14 @@ async function seed() {
   const connection = await getConnection();
   try {
     await ensureDatabase(connection);
+    const hasUsers = await tableExists(connection, 'users');
+    if (!hasUsers) {
+      throw new Error(
+        `Cannot seed: \`${DB_NAME}.users\` does not exist. Run migrations first (RUN_MIGRATIONS=true).`,
+      );
+    }
     await runSeeders(connection);
-    console.log('Seeders complete.');
+    console.log(`Seeders complete (database: ${DB_NAME}).`);
   } finally {
     await connection.end();
   }
