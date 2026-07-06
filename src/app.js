@@ -17,6 +17,9 @@ const { generalLimiter } = require('./middleware/rateLimit.middleware');
 
 const app = express();
 
+// Railway (and other reverse proxies) sit in front of the app.
+app.set('trust proxy', 1);
+
 const corsOrigins = (process.env.CORS_ORIGIN || '*').split(',').map((o) => o.trim());
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
