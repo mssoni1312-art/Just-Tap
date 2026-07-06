@@ -6,6 +6,21 @@ const tasksPaths = {
   '/tasks/summary': {
     get: op('get', ['Tasks'], 'Task summary counts', { operationId: 'tasksSummary' }),
   },
+  '/tasks/assignments': {
+    get: op('get', ['Tasks'], 'List task-to-manager assignments', {
+      operationId: 'tasksAssignmentsList',
+      description:
+        'Returns event tasks with the manager each task is assigned to (`assignedTo`, `assigneeName`). Supports filtering by event, manager, status, or unassigned tasks.',
+      parameters: paginationParams([
+        { name: 'status', in: 'query', schema: { type: 'string', enum: ['pending', 'assigned', 'in_progress', 'completed', 'overdue'] } },
+        { name: 'eventId', in: 'query', schema: { oneOf: [{ type: 'integer' }, { type: 'string', format: 'uuid' }] } },
+        { name: 'assignedTo', in: 'query', schema: { oneOf: [{ type: 'integer' }, { type: 'string', format: 'uuid' }], description: 'Manager staff ID' } },
+        { name: 'unassigned', in: 'query', schema: { type: 'string', enum: ['true', 'false'] } },
+        { name: 'search', in: 'query', schema: { type: 'string', description: 'Search task title, description, or manager name' } },
+      ]),
+      responseSchema: 'PaginatedList',
+    }),
+  },
   '/tasks/export': {
     get: op('get', ['Tasks'], 'Export task templates', {
       operationId: 'tasksExport',
@@ -52,7 +67,7 @@ const managerPaths = {
   '/managers': {
     get: op('get', ['Managers'], 'List event managers', {
       operationId: 'managersList',
-      description: 'Returns active event managers (`staff` with role `event_manager`). Use `forSelect=true` for an unpaginated list sorted by name (multi-select dropdowns). Supports pagination and search by name.',
+      description: 'Returns active event managers (`staff` with role `event_manager`). Captain is the same role — use this endpoint for both captain and manager dropdowns on create event step 4. Use `forSelect=true` for an unpaginated list sorted by name (multi-select dropdowns). Supports pagination and search by name.',
       parameters: paginationParams([
         { name: 'includeInactive', in: 'query', schema: { type: 'string', enum: ['true', 'false'] } },
         { name: 'forSelect', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: 'Return all matching managers as `{ items }` without pagination' },
@@ -62,13 +77,33 @@ const managerPaths = {
     post: op('post', ['Managers'], 'Allocate new manager', {
       operationId: 'managersCreate',
       description:
-        'Creates a new event manager (`staff` with role `event_manager`) from the **Allocate New Member** modal. Send `memberName` and `designation`.',
+        'Creates a new event manager (`staff` with role `event_manager`) from the **Allocate New Member** modal or captain quick-add. Send `memberName` and `designation`.',
       requestBody: jsonBody('CreateManagerRequest', true, {
         memberName: 'Julian Reed',
         designation: 'Content Strategist',
+        email: 'manager@example.com',
+        password: 'secret123',
       }),
       responseSchema: 'Staff',
       successDescription: 'Manager created',
+      created: true,
+    }),
+  },
+  '/managers/{id}/register': {
+    post: op('post', ['Managers'], 'Register manager portal login', {
+      operationId: 'managersRegister',
+      description: [
+        'Creates a manager portal user account linked to an existing event manager staff record.',
+        'Super admin sets the login email (username) and password here.',
+        'The manager then signs in via `POST /api/manager/auth/login` using the same email as `identifier` and the password set here.',
+      ].join('\n'),
+      parameters: [idParam('id', 'Manager staff ID (numeric or UUID)')],
+      requestBody: jsonBody('RegisterManagerRequest', true, {
+        email: 'manager@example.com',
+        password: 'secret123',
+      }),
+      responseSchema: 'Staff',
+      successDescription: 'Manager registered successfully',
       created: true,
     }),
   },
@@ -76,46 +111,112 @@ const managerPaths = {
 
 const clientPaths = {
   '/clients': {
-    get: op('get', ['Clients'], 'List clients', {
+    get: op('get', ['Clients'], 'List clients (dropdown)', {
       operationId: 'clientsList',
-      description: 'Returns clients for the event create client-name dropdown. Use `forSelect=true` for an unpaginated list sorted by name. Supports search by name, caterer, or contact number.',
+      description: [
+        '**Create Event — Client Name dropdown**',
+        '',
+        'Call with `forSelect=true` to load all clients sorted by name (recommended for the dropdown).',
+        'Optional `search` filters by client name, caterer name, or contact number.',
+        '',
+        '**Example:** `GET /clients?forSelect=true&search=testy`',
+      ].join('\n'),
       parameters: paginationParams([
-        { name: 'forSelect', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: 'Return all matching clients as `{ items }` without pagination' },
+        {
+          name: 'forSelect',
+          in: 'query',
+          required: false,
+          schema: { type: 'string', enum: ['true', 'false'], default: 'true' },
+          description: 'Set to `true` for dropdown list (`{ items: Client[] }`, no pagination)',
+        },
       ]),
-      responseSchema: 'PaginatedList',
+      responseSchema: 'ClientSelectList',
+      successDescription: 'Client list',
     }),
-    post: op('post', ['Clients'], 'Create client', {
+    post: op('post', ['Clients'], 'Create client (quick-add)', {
       operationId: 'clientsCreate',
-      requestBody: jsonBody('CreateClientRequest'),
+      description: [
+        '**Create Event — Add Client (+) modal**',
+        '',
+        'Adds a new client to the database. Only `name` is required when using the quick-add modal.',
+        'Other fields (`catererName`, `cityName`, `contactNo`, `reference`) are optional and can be filled on the event form later.',
+        '',
+        'Use the returned `id` as `clientId` when creating the event.',
+      ].join('\n'),
+      requestBody: jsonBody('CreateClientRequest', true, { name: 'testy' }),
+      responseSchema: 'Client',
       successDescription: 'Client created',
+      created: true,
     }),
   },
   '/clients/{id}': {
     get: op('get', ['Clients'], 'Get client by ID', {
       operationId: 'clientsGetById',
+      description: 'Returns a single client record by numeric ID or UUID.',
       parameters: [idParam()],
       responseSchema: 'Client',
+      successDescription: 'Client details',
     }),
   },
 };
 
-const captainPaths = {
-  '/captains': {
-    get: op('get', ['Captains'], 'List captains', {
-      operationId: 'captainsList',
-      description: 'Returns active captains (`staff` with role `captain`). Use `forSelect=true` for an unpaginated list sorted by name (captain name dropdown on create event step 4).',
+const functionNamePaths = {
+  '/function-names': {
+    get: op('get', ['Function Names'], 'List function names (dropdown)', {
+      operationId: 'functionNamesList',
+      description: [
+        '**Create Event — Select Function dropdown**',
+        '',
+        'Call with `forSelect=true` to load all active function names sorted by `sortOrder` then name (recommended for the dropdown).',
+        'Optional `search` filters by name.',
+        '',
+        '**Example:** `GET /function-names?forSelect=true`',
+      ].join('\n'),
       parameters: paginationParams([
+        {
+          name: 'forSelect',
+          in: 'query',
+          required: false,
+          schema: { type: 'string', enum: ['true', 'false'], default: 'true' },
+          description: 'Set to `true` for dropdown list (`{ items: FunctionName[] }`, no pagination)',
+        },
         { name: 'includeInactive', in: 'query', schema: { type: 'string', enum: ['true', 'false'] } },
-        { name: 'forSelect', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: 'Return all matching captains as `{ items }` without pagination' },
       ]),
-      responseSchema: 'PaginatedList',
+      responseSchema: 'FunctionNameSelectList',
+      successDescription: 'Function name list',
     }),
-    post: op('post', ['Captains'], 'Add captain', {
-      operationId: 'captainsCreate',
-      description: 'Creates a new captain (`staff` with role `captain`) for the Just Tap Information captain dropdown.',
-      requestBody: jsonBody('CreateCaptainRequest'),
-      responseSchema: 'Staff',
-      successDescription: 'Captain created',
+    post: op('post', ['Function Names'], 'Add function name (quick-add)', {
+      operationId: 'functionNamesCreate',
+      description: [
+        '**Create Event — Add Function (+) button**',
+        '',
+        'Adds a new function name to the database. Only `name` is required.',
+        'Use the returned `name` when adding a function to an event.',
+      ].join('\n'),
+      requestBody: jsonBody('CreateFunctionNameRequest', true, { name: 'Reception' }),
+      responseSchema: 'FunctionName',
+      successDescription: 'Function name created',
+      created: true,
+    }),
+  },
+  '/function-names/{id}': {
+    get: op('get', ['Function Names'], 'Get function name by ID', {
+      operationId: 'functionNamesGetById',
+      parameters: [idParam()],
+      responseSchema: 'FunctionName',
+      successDescription: 'Function name details',
+    }),
+    patch: op('patch', ['Function Names'], 'Update function name', {
+      operationId: 'functionNamesUpdate',
+      parameters: [idParam()],
+      requestBody: jsonBody('UpdateFunctionNameRequest'),
+      responseSchema: 'FunctionName',
+      successDescription: 'Function name updated',
+    }),
+    delete: op('delete', ['Function Names'], 'Delete function name', {
+      operationId: 'functionNamesDelete',
+      parameters: [idParam()],
+      successDescription: 'Function name deleted',
     }),
   },
 };
@@ -137,7 +238,7 @@ const staffPaths = {
     get: op('get', ['Staff'], 'List staff', {
       operationId: 'staffList',
       parameters: paginationParams([
-        { name: 'role', in: 'query', schema: { type: 'string', enum: ['event_manager', 'waiter', 'captain', 'other'] } },
+        { name: 'role', in: 'query', schema: { type: 'string', enum: ['event_manager', 'waiter', 'other'] } },
         { name: 'includeInactive', in: 'query', schema: { type: 'string', enum: ['true', 'false'] } },
       ]),
       responseSchema: 'PaginatedList',
@@ -439,6 +540,16 @@ const teamAllocationPaths = {
       successDescription: 'Manager report with assigned table list',
     }),
   },
+  '/team-allocations/{teamType}/staff/{staffId}/tasks': {
+    get: op('get', ['Team Allocation'], 'List assigned tasks for manager', {
+      operationId: 'teamAllocationStaffTasks',
+      description:
+        'Returns all assigned operational tasks for this manager on the given team board, with **summary** counts (total, completed, pending). Use on the admin manager view screen to review task progress.',
+      parameters: [teamTypeParam, staffIdParam],
+      responseSchema: 'TeamAllocationStaffTasks',
+      successDescription: 'Assigned tasks with completed/pending summary for manager',
+    }),
+  },
   '/team-allocations/{teamType}/staff/{staffId}/tasks/assign': {
     post: op('post', ['Team Allocation'], 'Assign tasks to manager from allocation board', {
       operationId: 'teamAllocationAssignTasks',
@@ -446,7 +557,8 @@ const teamAllocationPaths = {
       requestBody: jsonBody('AssignTeamTasksRequest', true, {
         tasks: [{ title: 'Just Social', description: 'Promote on Instagram', due_date: '2026-07-10' }],
       }),
-      successDescription: 'Tasks assigned to manager for their active event',
+      responseSchema: 'TeamAllocationStaffTasks',
+      successDescription: 'Tasks assigned; returns updated assigned task list for this manager',
     }),
   },
 };
@@ -455,7 +567,7 @@ module.exports = {
   tasksPaths,
   managerPaths,
   clientPaths,
-  captainPaths,
+  functionNamePaths,
   staffPaths,
   feedbackPaths,
   feedbackQuestionPaths,

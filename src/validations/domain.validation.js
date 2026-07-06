@@ -33,18 +33,18 @@ const bulkUpdateInquiriesSchema = bulkIdsSchema.keys({
 
 const createStaffSchema = Joi.object({
   name: Joi.string().required(),
-  role: Joi.string().valid('event_manager', 'waiter', 'captain', 'other'),
+  role: Joi.string().valid('event_manager', 'waiter', 'other'),
   isActive: Joi.boolean(),
 });
 
 const updateStaffSchema = Joi.object({
   name: Joi.string(),
-  role: Joi.string().valid('event_manager', 'waiter', 'captain', 'other'),
+  role: Joi.string().valid('event_manager', 'waiter', 'other'),
   isActive: Joi.boolean(),
 });
 
 const listStaffSchema = paginationQuery.keys({
-  role: Joi.string().valid('event_manager', 'waiter', 'captain', 'other'),
+  role: Joi.string().valid('event_manager', 'waiter', 'other'),
   includeInactive: Joi.string().valid('true', 'false'),
 });
 
@@ -57,35 +57,51 @@ const listClientsSchema = paginationQuery.keys({
   forSelect: Joi.string().valid('true', 'false'),
 });
 
-const listCaptainsSchema = paginationQuery.keys({
-  includeInactive: Joi.string().valid('true', 'false'),
+const listFunctionNamesSchema = paginationQuery.keys({
   forSelect: Joi.string().valid('true', 'false'),
+  includeInactive: Joi.string().valid('true', 'false'),
 });
 
-const createCaptainSchema = Joi.object({
-  name: Joi.string().required(),
+const createFunctionNameSchema = Joi.object({
+  name: Joi.string().trim().required(),
+  sortOrder: Joi.number().integer().min(0).default(0),
   isActive: Joi.boolean().default(true),
 });
+
+const updateFunctionNameSchema = Joi.object({
+  name: Joi.string().trim(),
+  sortOrder: Joi.number().integer().min(0),
+  isActive: Joi.boolean(),
+}).min(1);
 
 const createManagerSchema = Joi.object({
   name: Joi.string().trim(),
   memberName: Joi.string().trim(),
   designation: Joi.string().max(150).allow(null, '').trim(),
   isActive: Joi.boolean().default(true),
+  email: Joi.string().trim().email(),
+  username: Joi.string().trim().email(),
+  password: Joi.string().min(6),
 }).or('name', 'memberName');
 
+const registerManagerSchema = Joi.object({
+  email: Joi.string().trim().email(),
+  username: Joi.string().trim().email().description('Login email (alias for email)'),
+  password: Joi.string().min(6).required(),
+}).or('email', 'username');
+
 const createClientSchema = Joi.object({
-  name: Joi.string().required(),
-  catererName: Joi.string().required(),
-  cityName: Joi.string().required(),
-  contactNo: Joi.string().required(),
-  reference: Joi.string().required(),
+  name: Joi.string().trim().required(),
+  catererName: Joi.string().trim().allow(null, '').optional(),
+  cityName: Joi.string().trim().allow(null, '').optional(),
+  contactNo: Joi.string().trim().allow(null, '').optional(),
+  reference: Joi.string().trim().allow(null, '').optional(),
   isHighPriority: Joi.boolean().default(false),
 });
 
 const bulkUpdateStaffSchema = bulkIdsSchema.keys({
   isActive: Joi.boolean(),
-  role: Joi.string().valid('event_manager', 'waiter', 'captain', 'other'),
+  role: Joi.string().valid('event_manager', 'waiter', 'other'),
 });
 
 const createCategorySchema = Joi.object({
@@ -211,6 +227,17 @@ const saveBillingPreviewSchema = Joi.object({
   notes: Joi.string().allow(null, '').default(''),
 });
 
+const managerCostAmountSchema = Joi.number().min(0).allow(null);
+
+const saveManagerCostSchema = Joi.object({
+  clientCost: managerCostAmountSchema,
+  tabletCost: managerCostAmountSchema,
+  transportationCost: managerCostAmountSchema,
+  assignManagerCost: managerCostAmountSchema,
+  photographyVideographyCost: managerCostAmountSchema,
+  otherCharges: managerCostAmountSchema,
+});
+
 const tableAssignmentSchema = Joi.object({
   tableNumber: Joi.number().integer().required(),
   allocationType: Joi.string().valid('dining', 'captain'),
@@ -255,6 +282,14 @@ const updateTaskSchema = Joi.object({
 
 const listTasksSchema = paginationQuery.keys({
   category: Joi.string().allow(''),
+});
+
+const listTaskAssignmentsSchema = paginationQuery.keys({
+  status: Joi.string().valid('pending', 'assigned', 'in_progress', 'completed', 'overdue'),
+  eventId: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid()),
+  assignedTo: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid()),
+  unassigned: Joi.string().valid('true', 'false'),
+  search: Joi.string().allow(''),
 });
 
 const assignTasksSchema = Joi.object({
@@ -403,9 +438,11 @@ module.exports = {
   listStaffSchema,
   listManagersSchema,
   listClientsSchema,
-  listCaptainsSchema,
-  createCaptainSchema,
+  listFunctionNamesSchema,
+  createFunctionNameSchema,
+  updateFunctionNameSchema,
   createManagerSchema,
+  registerManagerSchema,
   createClientSchema,
   bulkUpdateStaffSchema,
   createCategorySchema,
@@ -422,6 +459,7 @@ module.exports = {
   exportQuerySchema,
   menuPlanningSchema,
   saveBillingPreviewSchema,
+  saveManagerCostSchema,
   tableAssignmentSchema,
   bulkTablesSchema,
   assignTableManagerSchema,
@@ -430,6 +468,7 @@ module.exports = {
   createTaskSchema,
   updateTaskSchema,
   listTasksSchema,
+  listTaskAssignmentsSchema,
   assignTasksSchema,
   feedbackReplySchema,
   listFeedbackSchema,

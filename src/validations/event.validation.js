@@ -28,17 +28,17 @@ const functionSchema = Joi.object({
   endTime: Joi.string().allow(null, ''),
   startDateTime: Joi.date().iso(),
   endDateTime: Joi.date().iso(),
-  pax: Joi.number().integer().min(1).allow(null),
   subVenueRemarks: Joi.string().allow(null, ''),
   rate: Joi.number().min(0).allow(null),
 });
 
 const justTapInformationSchema = Joi.object({
   noOfTablets: Joi.number().integer().min(0).allow(null),
-  noOfCaptains: Joi.number().integer().min(0).allow(null),
-  assignedCaptainIds: Joi.array().items(Joi.number().integer()).max(50),
   noOfManagers: Joi.number().integer().min(0).allow(null),
   assignedManagerIds: Joi.array().items(Joi.number().integer()).max(50),
+  // Deprecated aliases — treated the same as manager fields
+  noOfCaptains: Joi.number().integer().min(0).allow(null),
+  assignedCaptainIds: Joi.array().items(Joi.number().integer()).max(50),
   rate: Joi.number().min(0).allow(null),
 });
 
@@ -107,7 +107,6 @@ const createEventSchema = eventBodySchema.custom((value, helpers) => {
     if (!value.catererName) missing.push('catererName');
     if (!value.cityName) missing.push('cityName');
     if (!value.clientMobile) missing.push('clientMobile');
-    if (!value.reference) missing.push('reference');
     if (missing.length) {
       return helpers.message(`When clientId is omitted, required: ${missing.join(', ')}`);
     }
@@ -155,6 +154,14 @@ const tableNumberParamSchema = Joi.object({
   tableNumber: Joi.number().integer().required(),
 });
 
+const assignEventManagersSchema = Joi.object({
+  assignedManagerIds: Joi.array()
+    .items(Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid()))
+    .min(1)
+    .max(50)
+    .required(),
+});
+
 module.exports = {
   listEventsSchema,
   calendarSchema,
@@ -167,6 +174,7 @@ module.exports = {
   eventIdParam,
   functionIdParamSchema,
   tableNumberParamSchema,
+  assignEventManagersSchema,
   eventStatuses,
   eventMetaStatuses,
 };

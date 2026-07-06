@@ -1,7 +1,7 @@
-const dashboardRepository = require('../../repositories/dashboard.repository');
+const managerDashboardRepository = require('../../repositories/manager/dashboard.repository');
 
 const managerDashboardService = {
-  getHomeStats: (staffId) => dashboardRepository.getHomeStats(staffId),
+  getHomeStats: (staffId) => managerDashboardRepository.getHomeStats(staffId),
 };
 
 module.exports = managerDashboardService;

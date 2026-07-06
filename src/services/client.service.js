@@ -19,12 +19,14 @@ const clientService = {
   },
 
   async create(data) {
+    const name = data.name?.trim();
     const id = await clientRepository.create({
-      name: data.name,
-      caterer_name: data.catererName,
-      city_name: data.cityName,
-      contact_no: data.contactNo,
-      reference: data.reference,
+      name,
+      caterer_name: data.catererName?.trim() || name,
+      client_address: data.clientAddress?.trim() || null,
+      city_name: data.cityName?.trim() || '',
+      contact_no: data.contactNo?.trim() || null,
+      reference: data.reference?.trim() ?? '',
       is_high_priority: data.isHighPriority,
     });
     return this.getById(id);

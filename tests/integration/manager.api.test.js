@@ -124,18 +124,61 @@ describe('Manager API integration', { skip: process.env.SKIP_INTEGRATION_TESTS =
     assert.equal(res.body.data.isActive, true);
   });
 
-  it('GET /api/manager/dashboard/home returns scoped stats', async (t) => {
+  it('POST /api/v1/managers/:id/register then manager login uses same credentials', async (t) => {
     if (!dbReady) return t.skip();
 
-    const res = await request(app)
-      .get('/api/manager/dashboard/home')
-      .set('Authorization', `Bearer ${managerToken}`);
+    const email = `manager.register.${Date.now()}@justtap.com`;
+    const password = 'register123';
 
-    assert.equal(res.status, 200);
-    assert.equal(res.body.success, true);
-    assert.ok(typeof res.body.data.todayEvents === 'number');
-    assert.ok(typeof res.body.data.upcomingEvents === 'number');
-    assert.equal(res.body.data.pendingInquiries, undefined);
+    const createRes = await request(app)
+      .post('/api/v1/managers')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        memberName: `Register Test ${Date.now()}`,
+        designation: 'Ops Lead',
+      });
+
+    assert.equal(createRes.status, 201);
+    const staffId = createRes.body.data.id;
+
+    const registerRes = await request(app)
+      .post(`/api/v1/managers/${staffId}/register`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ email, password });
+
+    assert.equal(registerRes.status, 201);
+    assert.equal(registerRes.body.data.isRegistered, true);
+    assert.equal(registerRes.body.data.email, email);
+
+    const loginRes = await request(app)
+      .post('/api/manager/auth/login')
+      .send({ identifier: email, password });
+
+    assert.equal(loginRes.status, 200);
+    assert.equal(loginRes.body.data.user.email, email);
+    assert.equal(loginRes.body.data.user.role, 'manager');
+    assert.equal(loginRes.body.data.user.staffId, staffId);
+  });
+
+  it('GET /api/manager/dashboard/home returns scoped stats matching event lists', async (t) => {
+    if (!dbReady) return t.skip();
+
+    const [homeRes, todayRes, upcomingRes, listRes] = await Promise.all([
+      request(app).get('/api/manager/dashboard/home').set('Authorization', `Bearer ${managerToken}`),
+      request(app).get('/api/manager/events/today').set('Authorization', `Bearer ${managerToken}`),
+      request(app).get('/api/manager/events/upcoming').set('Authorization', `Bearer ${managerToken}`),
+      request(app).get('/api/manager/events').query({ limit: 100 }).set('Authorization', `Bearer ${managerToken}`),
+    ]);
+
+    assert.equal(homeRes.status, 200);
+    assert.equal(todayRes.status, 200);
+    assert.equal(upcomingRes.status, 200);
+    assert.equal(listRes.status, 200);
+
+    assert.equal(homeRes.body.data.todayEvents, todayRes.body.data.length);
+    assert.equal(homeRes.body.data.upcomingEvents, upcomingRes.body.data.length);
+    assert.ok(homeRes.body.data.todayEvents <= listRes.body.data.items.length);
+    assert.equal(homeRes.body.data.pendingInquiries, undefined);
   });
 
   it('GET /api/manager/events lists only allocated events for manager 1', async (t) => {
@@ -151,6 +194,61 @@ describe('Manager API integration', { skip: process.env.SKIP_INTEGRATION_TESTS =
     for (const event of items) {
       assert.notEqual(event.uuid, otherManagerEventUuid);
     }
+  });
+
+  it('POST /api/manager/events does not list event until admin assigns manager', async (t) => {
+    if (!dbReady) return t.skip();
+
+    const meRes = await request(app)
+      .get('/api/manager/auth/me')
+      .set('Authorization', `Bearer ${managerToken}`);
+    const managerStaffId = meRes.body.data.user.staffId;
+    assert.ok(managerStaffId);
+
+    const uniqueClient = `Unassigned Test Client ${Date.now()}`;
+
+    const createRes = await request(app)
+      .post('/api/manager/events')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({
+        clientName: uniqueClient,
+        clientAddress: 'Test Address',
+        clientMobile: '+919999999999',
+        reference: `REF-${Date.now()}`,
+        venueName: 'Test Venue',
+        cityName: 'Mumbai',
+        startDate: '2026-08-01',
+        endDate: '2026-08-01',
+        status: 'inquiry',
+      });
+
+    assert.equal(createRes.status, 201);
+    const createdUuid = createRes.body.data.uuid;
+    assert.ok(createdUuid);
+
+    const listBeforeAssign = await request(app)
+      .get('/api/manager/events')
+      .query({ search: uniqueClient })
+      .set('Authorization', `Bearer ${managerToken}`);
+
+    assert.equal(listBeforeAssign.status, 200);
+    assert.equal(listBeforeAssign.body.data.items.length, 0);
+
+    const assignRes = await request(app)
+      .post(`/api/v1/events/${createdUuid}/assign-managers`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ assignedManagerIds: [Number(managerStaffId)] });
+
+    assert.equal(assignRes.status, 200);
+
+    const listAfterAssign = await request(app)
+      .get('/api/manager/events')
+      .query({ search: uniqueClient })
+      .set('Authorization', `Bearer ${managerToken}`);
+
+    assert.equal(listAfterAssign.status, 200);
+    assert.equal(listAfterAssign.body.data.items.length, 1);
+    assert.equal(listAfterAssign.body.data.items[0].uuid, createdUuid);
   });
 
   it('GET /api/manager/events/:id denies access to another manager event', async (t) => {

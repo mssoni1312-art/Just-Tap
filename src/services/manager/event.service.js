@@ -1,14 +1,25 @@
-const eventRepository = require('../../repositories/event.repository');
+const managerEventRepository = require('../../repositories/manager/event.repository');
 const eventService = require('../event.service');
 const { assertManagerOwnsEvent } = require('../../helpers/managerScope');
 const { resolveId } = require('../../helpers/idResolver');
 const { eventStatuses } = require('../../validations/event.validation');
 const AppError = require('../../utils/AppError');
 
+const pad2 = (n) => String(n).padStart(2, '0');
+
 const toDateOnly = (value) => {
   if (!value) return null;
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return null;
+    return `${value.getFullYear()}-${pad2(value.getMonth() + 1)}-${pad2(value.getDate())}`;
+  }
   return String(value).slice(0, 10);
+};
+
+const addDays = (dateStr, days) => {
+  const date = new Date(`${dateStr}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  return toDateOnly(date);
 };
 
 const splitDateTime = (value) => {
@@ -97,7 +108,7 @@ const normalizeManagerCreatePayload = (data) => {
 };
 
 const getWeekRange = (dateStr) => {
-  const date = new Date(dateStr);
+  const date = new Date(`${toDateOnly(dateStr)}T12:00:00`);
   const day = date.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   const monday = new Date(date);
@@ -105,56 +116,78 @@ const getWeekRange = (dateStr) => {
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
   return {
-    startDate: monday.toISOString().slice(0, 10),
-    endDate: sunday.toISOString().slice(0, 10),
+    startDate: toDateOnly(monday),
+    endDate: toDateOnly(sunday),
   };
 };
 
-const buildCalendarResponse = (rows) => {
+const buildCalendarResponse = (rows, rangeStart = null, rangeEnd = null) => {
   const calendar = {};
   for (const row of rows) {
-    const dateKey = toDateOnly(row.date);
-    if (!calendar[dateKey]) calendar[dateKey] = [];
-    const marker = { status: row.status, id: String(row.id), clientName: row.client_name, venue: row.venue_name };
-    if (!calendar[dateKey].some((m) => m.id === marker.id)) {
-      calendar[dateKey].push(marker);
+    let startDate = toDateOnly(row.start_date || row.date);
+    let endDate = toDateOnly(row.end_date || row.start_date || row.date);
+    if (rangeStart && startDate < rangeStart) startDate = rangeStart;
+    if (rangeEnd && endDate > rangeEnd) endDate = rangeEnd;
+
+    const marker = {
+      status: row.status,
+      id: String(row.id),
+      clientName: row.client_name,
+      venue: row.venue_name,
+    };
+
+    for (let day = startDate; day <= endDate; day = addDays(day, 1)) {
+      if (!calendar[day]) calendar[day] = [];
+      if (!calendar[day].some((m) => m.id === marker.id)) {
+        calendar[day].push(marker);
+      }
     }
   }
   return { calendar, legend: eventStatuses };
 };
 
 const managerEventService = {
-  list: (staffId, query) => eventRepository.findAll(query, staffId),
+  list: (staffId, query) => managerEventRepository.findAll(staffId, query),
 
   async calendar(staffId, query) {
     if (query.date) {
       const date = toDateOnly(query.date);
-      const rows = await eventRepository.findByDateRange(date, date, staffId);
-      return buildCalendarResponse(rows);
+      const rows = await managerEventRepository.findByDateRange(staffId, date, date);
+      return buildCalendarResponse(rows, date, date);
     }
 
     if (query.weekStart) {
       const { startDate, endDate } = getWeekRange(query.weekStart);
-      const rows = await eventRepository.findByDateRange(startDate, endDate, staffId);
-      return { ...buildCalendarResponse(rows), startDate, endDate, view: 'week' };
+      const rows = await managerEventRepository.findByDateRange(staffId, startDate, endDate);
+      return {
+        ...buildCalendarResponse(rows, startDate, endDate),
+        startDate,
+        endDate,
+        view: 'week',
+      };
     }
 
     const year = query.year || new Date().getFullYear();
     const month = query.month || new Date().getMonth() + 1;
-    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-    const endDate = new Date(year, month, 0).toISOString().slice(0, 10);
-    const rows = await eventRepository.findByDateRange(startDate, endDate, staffId);
-    return { ...buildCalendarResponse(rows), year, month, view: 'month' };
+    const startDate = `${year}-${pad2(month)}-01`;
+    const endDate = `${year}-${pad2(month)}-${pad2(new Date(year, month, 0).getDate())}`;
+    const rows = await managerEventRepository.findByDateRange(staffId, startDate, endDate);
+    return {
+      ...buildCalendarResponse(rows, startDate, endDate),
+      year,
+      month,
+      view: 'month',
+    };
   },
 
-  today: (staffId) => eventRepository.findToday(staffId),
-  upcoming: (staffId) => eventRepository.findUpcoming(staffId),
+  today: (staffId) => managerEventRepository.findToday(staffId),
+  upcoming: (staffId) => managerEventRepository.findUpcoming(staffId),
 
   listCompleted: (staffId, query) =>
-    eventRepository.findAll({ ...query, completed: 'true' }, staffId),
+    managerEventRepository.findAll(staffId, { ...query, completed: 'true' }),
 
   listCancelled: (staffId, query) =>
-    eventRepository.findAll({ ...query, status: 'cancelled' }, staffId),
+    managerEventRepository.findAll(staffId, { ...query, status: 'cancelled' }),
 
   async getById(staffId, idOrUuid) {
     const id = await resolveId('events', idOrUuid);
@@ -162,18 +195,9 @@ const managerEventService = {
     return eventService.getById(id);
   },
 
-  async create(staffId, data, userId) {
+  async create(_staffId, data, userId) {
     const normalized = normalizeManagerCreatePayload(data);
-    const payload = {
-      ...normalized,
-      assignedManagerIds: [staffId],
-      assignedManagerId: staffId,
-      justTapInformation: {
-        ...(normalized.justTapInformation || {}),
-        assignedManagerIds: [staffId],
-      },
-    };
-    return eventService.create(payload, userId);
+    return eventService.create(normalized, userId);
   },
 
   async update(staffId, idOrUuid, data, userId) {

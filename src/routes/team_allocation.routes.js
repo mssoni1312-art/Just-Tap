@@ -31,6 +31,19 @@ router.get(
   })
 );
 
+router.get(
+  '/:teamType/staff/:staffId/tasks',
+  authenticate,
+  requireSuperAdmin,
+  asyncHandler(async (req, res) => {
+    const { sendSuccess } = require('../helpers/response');
+    sendSuccess(
+      res,
+      await teamAllocationService.getStaffTasks(req.params.teamType, req.params.staffId)
+    );
+  })
+);
+
 router.post(
   '/:teamType/staff/:staffId/tasks/assign',
   authenticate,

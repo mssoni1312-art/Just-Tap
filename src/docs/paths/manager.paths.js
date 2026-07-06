@@ -185,6 +185,21 @@ const managerEventPaths = {
       },
     }),
   },
+  '/events/{eventId}/manager-cost': {
+    get: op('get', [MANAGER_TAG, 'Manager Events'], 'Get manager cost breakdown', {
+      operationId: 'managerEventManagerCostGet',
+      description: 'Returns saved cost fields for the Cost of Manager screen. When nothing has been saved yet, returns empty values with `filled: false`.',
+      parameters: [eventIdParam],
+      responseSchema: 'EventManagerCost',
+    }),
+    put: op('put', [MANAGER_TAG, 'Manager Events'], 'Save manager cost breakdown', {
+      operationId: 'managerEventManagerCostSave',
+      description: 'Upserts cost fields for the Cost of Manager screen. `totalCost` is calculated server-side from the individual amounts.',
+      parameters: [eventIdParam],
+      requestBody: jsonBody('SaveManagerCostRequest', true),
+      responseSchema: 'EventManagerCost',
+    }),
+  },
   '/events/{eventId}/all-tasks': {
     get: op('get', [MANAGER_TAG, 'Manager Tasks'], 'Get All Tasks screen payload', {
       operationId: 'managerEventAllTasksGet',

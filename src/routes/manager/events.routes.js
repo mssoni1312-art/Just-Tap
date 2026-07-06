@@ -2,6 +2,8 @@ const express = require('express');
 const asyncHandler = require('../../utils/asyncHandler');
 const validate = require('../../middleware/validate.middleware');
 const authenticate = require('../../middleware/auth.middleware');
+const allowManagerOrSuperAdmin = require('../../middleware/allowManagerOrSuperAdmin.middleware');
+const optionalResolveManagerStaff = require('../../middleware/optionalResolveManagerStaff.middleware');
 const requireManager = require('../../middleware/requireManager.middleware');
 const resolveManagerStaff = require('../../middleware/resolveManagerStaff.middleware');
 const eventController = require('../../controllers/manager/event.controller');
@@ -12,6 +14,7 @@ const feedbackQuestionController = require('../../controllers/manager/feedbackQu
 const tableController = require('../../controllers/manager/table.controller');
 const orderController = require('../../controllers/manager/order.controller');
 const billingController = require('../../controllers/manager/billing.controller');
+const managerCostController = require('../../controllers/manager/managerCost.controller');
 const {
   listEventsSchema,
   functionSchema,
@@ -27,6 +30,7 @@ const {
   orderTableQuerySchema,
   reportQuerySchema,
   saveBillingPreviewSchema,
+  saveManagerCostSchema,
   bulkTablesSchema,
   assignManagerTablesSchema,
   assignTableManagerSchema,
@@ -46,6 +50,25 @@ const {
 } = require('../../validations/manager.validation');
 
 const router = express.Router();
+
+router.get(
+  '/:eventId/manager-cost',
+  authenticate,
+  allowManagerOrSuperAdmin,
+  optionalResolveManagerStaff,
+  validate(eventIdParam, 'params'),
+  asyncHandler(managerCostController.get),
+);
+router.put(
+  '/:eventId/manager-cost',
+  authenticate,
+  allowManagerOrSuperAdmin,
+  optionalResolveManagerStaff,
+  validate(eventIdParam, 'params'),
+  validate(saveManagerCostSchema),
+  asyncHandler(managerCostController.save),
+);
+
 router.use(authenticate, requireManager, resolveManagerStaff);
 
 router.get('/meta', asyncHandler(eventController.meta));

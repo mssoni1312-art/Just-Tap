@@ -72,6 +72,29 @@ const reportPaths = {
       responseSchema: 'ReportDetail',
     }),
   },
+  '/report/template/upload': {
+    post: op('post', ['Report Builder'], 'Upload custom template', {
+      operationId: 'reportUploadTemplate',
+      description: 'Upload a custom menu design image and add it to the template library.',
+      requestBody: {
+        required: true,
+        content: {
+          'multipart/form-data': {
+            schema: {
+              type: 'object',
+              required: ['file'],
+              properties: {
+                file: { type: 'string', format: 'binary' },
+                name: { type: 'string', maxLength: 150 },
+              },
+            },
+          },
+        },
+      },
+      created: true,
+      responseSchema: 'ReportTemplate',
+    }),
+  },
   '/report/theme': {
     patch: op('patch', ['Report Builder'], 'Update color theme', {
       operationId: 'reportUpdateTheme',

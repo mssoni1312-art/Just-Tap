@@ -27,6 +27,13 @@ const formatEventTask = (row) => ({
   updatedAt: row.updated_at,
 });
 
+const formatTaskAssignment = (row) => ({
+  ...formatEventTask(row),
+  eventUuid: row.event_uuid || null,
+  eventClientName: row.event_client_name || null,
+  eventVenue: row.event_venue || null,
+});
+
 const taskRepository = {
   async getSummary() {
     const [rows] = await pool.execute(
@@ -161,12 +168,16 @@ const taskRepository = {
     return buildPaginatedResponse(rows.map(formatEventTask), countRows[0].total, page, limit);
   },
 
-  async assignToEvent(eventId, tasks, assignedTo) {
+  async assignToEvent(eventId, tasks, assignedTo, options = {}) {
+    const { teamType = null, parentTaskTemplateId = null } = options;
     const created = [];
     for (const task of tasks) {
       const [result] = await pool.execute(
-        `INSERT INTO event_tasks (event_id, task_template_id, title, description, status, assigned_to, due_date)
-         VALUES (?, ?, ?, ?, 'assigned', ?, ?)`,
+        `INSERT INTO event_tasks (
+           event_id, task_template_id, title, description, status, assigned_to, due_date,
+           team_type, parent_task_template_id
+         )
+         VALUES (?, ?, ?, ?, 'assigned', ?, ?, ?, ?)`,
         [
           eventId,
           task.task_template_id || null,
@@ -174,6 +185,8 @@ const taskRepository = {
           task.description || null,
           assignedTo || null,
           task.due_date || null,
+          teamType,
+          parentTaskTemplateId,
         ]
       );
       created.push(result.insertId);
@@ -228,6 +241,59 @@ const taskRepository = {
       'UPDATE event_tasks SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL',
       [id]
     );
+  },
+
+  async findAllAssignments(query) {
+    const { page, limit, offset, sortOrder } = parsePagination(query);
+    const sortBy = sanitizeSortBy('event_tasks', query.sortBy);
+    const conditions = ['et.deleted_at IS NULL', 'e.deleted_at IS NULL'];
+    const params = [];
+
+    if (query.status) {
+      conditions.push('et.status = ?');
+      params.push(query.status);
+    }
+    if (query.eventId) {
+      conditions.push('et.event_id = ?');
+      params.push(query.eventId);
+    }
+    if (query.assignedTo) {
+      conditions.push('et.assigned_to = ?');
+      params.push(query.assignedTo);
+    }
+    if (query.unassigned === 'true') {
+      conditions.push('et.assigned_to IS NULL');
+    }
+    if (query.search) {
+      conditions.push('(et.title LIKE ? OR et.description LIKE ? OR s.name LIKE ?)');
+      const s = `%${query.search}%`;
+      params.push(s, s, s);
+    }
+
+    const where = conditions.join(' AND ');
+    const [countRows] = await pool.execute(
+      `SELECT COUNT(*) AS total
+       FROM event_tasks et
+       JOIN events e ON e.id = et.event_id
+       LEFT JOIN staff s ON s.id = et.assigned_to AND s.deleted_at IS NULL
+       WHERE ${where}`,
+      params
+    );
+    const [rows] = await pool.execute(
+      `SELECT et.*,
+         s.name AS assignee_name,
+         e.uuid AS event_uuid,
+         e.client_name AS event_client_name,
+         e.venue_name AS event_venue
+       FROM event_tasks et
+       JOIN events e ON e.id = et.event_id
+       LEFT JOIN staff s ON s.id = et.assigned_to AND s.deleted_at IS NULL
+       WHERE ${where}
+       ORDER BY et.${sortBy} ${sortOrder}
+       LIMIT ${limit} OFFSET ${offset}`,
+      params
+    );
+    return buildPaginatedResponse(rows.map(formatTaskAssignment), countRows[0].total, page, limit);
   },
 
   async findAllForManager(staffId, query) {

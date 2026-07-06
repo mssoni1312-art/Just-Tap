@@ -17,6 +17,17 @@ const taskService = {
 
   list: (query) => taskRepository.findTemplates(query),
 
+  async listAssignments(query) {
+    const resolvedQuery = { ...query };
+    if (query.eventId) {
+      resolvedQuery.eventId = await resolveId('events', query.eventId);
+    }
+    if (query.assignedTo) {
+      resolvedQuery.assignedTo = await resolveId('staff', query.assignedTo);
+    }
+    return taskRepository.findAllAssignments(resolvedQuery);
+  },
+
   async getById(idOrUuid) {
     const id = await resolveId('task_templates', idOrUuid);
     const row = await taskRepository.findTemplateById(id);

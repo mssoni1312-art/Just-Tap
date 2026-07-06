@@ -9,6 +9,7 @@ const taskController = require('../controllers/task.controller');
 const feedbackController = require('../controllers/feedback.controller');
 const feedbackQuestionController = require('../controllers/feedbackQuestion.controller');
 const billingController = require('../controllers/billing.controller');
+const managerCostController = require('../controllers/managerCost.controller');
 const domain = require('../controllers/domain.controller');
 const {
   listEventsSchema,
@@ -22,10 +23,12 @@ const {
   eventIdParam,
   functionIdParamSchema,
   tableNumberParamSchema,
+  assignEventManagersSchema,
 } = require('../validations/event.validation');
 const {
   menuPlanningSchema,
   saveBillingPreviewSchema,
+  saveManagerCostSchema,
   bulkTablesSchema,
   tableAssignmentSchema,
   assignTableManagerSchema,
@@ -57,6 +60,13 @@ router.get('/:id', validate(idParamSchema, 'params'), asyncHandler(eventControll
 router.patch('/:id', validate(idParamSchema, 'params'), validate(updateEventSchema), asyncHandler(eventController.update));
 router.delete('/:id', validate(idParamSchema, 'params'), asyncHandler(eventController.remove));
 
+router.post(
+  '/:eventId/assign-managers',
+  validate(eventIdParam, 'params'),
+  validate(assignEventManagersSchema),
+  asyncHandler(eventController.assignManagers),
+);
+
 router.get('/:eventId/tasks', validate(eventIdParam, 'params'), validate(listTasksSchema, 'query'), asyncHandler(taskController.listByEvent));
 router.post('/:eventId/tasks/assign', validate(eventIdParam, 'params'), validate(assignTasksSchema), asyncHandler(taskController.assign));
 
@@ -70,6 +80,9 @@ router.put('/:eventId/menu-planning', validate(eventIdParam, 'params'), validate
 router.get('/:eventId/billing', validate(eventIdParam, 'params'), asyncHandler(billingController.get));
 router.get('/:eventId/billing/preview', validate(eventIdParam, 'params'), asyncHandler(billingController.getClientPreview));
 router.put('/:eventId/billing/save-preview', validate(eventIdParam, 'params'), validate(saveBillingPreviewSchema), asyncHandler(billingController.savePreview));
+
+router.get('/:eventId/manager-cost', validate(eventIdParam, 'params'), asyncHandler(managerCostController.get));
+router.put('/:eventId/manager-cost', validate(eventIdParam, 'params'), validate(saveManagerCostSchema), asyncHandler(managerCostController.save));
 
 router.get('/:eventId/tables', validate(eventIdParam, 'params'), asyncHandler(domain.table.get));
 router.put('/:eventId/tables', validate(eventIdParam, 'params'), validate(bulkTablesSchema), asyncHandler(domain.table.bulkSave));

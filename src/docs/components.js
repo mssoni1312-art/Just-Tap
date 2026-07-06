@@ -63,6 +63,33 @@ const components = {
         pagination: { $ref: '#/components/schemas/PaginationMeta' },
       },
     },
+    ClientSelectList: {
+      type: 'object',
+      description: 'Client list for Create Event dropdown. Returned by `GET /clients?forSelect=true` (no pagination).',
+      properties: {
+        items: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/Client' },
+        },
+      },
+      example: {
+        items: [
+          {
+            id: 14,
+            uuid: '9a9575d7-784f-11f1-945a-7a40d310aa11',
+            name: 'testy',
+            catererName: 'testy',
+            clientAddress: null,
+            cityName: '',
+            contactNo: null,
+            reference: '',
+            isHighPriority: false,
+            createdAt: '2026-07-05 08:57:51',
+            updatedAt: '2026-07-05 08:57:51',
+          },
+        ],
+      },
+    },
     BulkIdsRequest: {
       type: 'object',
       required: ['ids'],
@@ -324,17 +351,11 @@ const components = {
       description: 'Create Event step 4 — Just Tap Information (replaces former Menu Package tab)',
       properties: {
         noOfTablets: { type: 'integer', example: 10 },
-        noOfCaptains: { type: 'integer', example: 8 },
-        assignedCaptainIds: {
-          type: 'array',
-          items: { type: 'integer' },
-          description: 'Captain staff IDs from GET /captains (forSelect=true)',
-        },
         noOfManagers: { type: 'integer', example: 10 },
         assignedManagerIds: {
           type: 'array',
           items: { type: 'integer' },
-          description: 'Manager staff IDs from GET /managers (forSelect=true)',
+          description: 'Manager staff IDs from GET /managers (forSelect=true). Captain is the same role — use manager endpoints only.',
         },
         rate: { type: 'number', example: 25000 },
       },
@@ -455,22 +476,63 @@ const components = {
     Client: {
       type: 'object',
       properties: {
-        id: { type: 'integer' },
-        uuid: { type: 'string', format: 'uuid' },
-        name: { type: 'string', example: 'Rajesh Kumar' },
-        catererName: { type: 'string', example: 'Sai Caterer' },
-        cityName: { type: 'string', example: 'Baroda' },
-        contactNo: { type: 'string', example: '+918264737487' },
-        reference: { type: 'string', example: 'Friend' },
-        isHighPriority: { type: 'boolean', example: true },
+        id: { type: 'integer', example: 14 },
+        uuid: { type: 'string', format: 'uuid', example: '9a9575d7-784f-11f1-945a-7a40d310aa11' },
+        name: { type: 'string', example: 'testy', description: 'Display name in Create Event client dropdown' },
+        catererName: { type: 'string', example: 'testy', nullable: true },
+        clientAddress: { type: 'string', nullable: true },
+        cityName: { type: 'string', example: '', nullable: true },
+        contactNo: { type: 'string', example: '+919811122233', nullable: true },
+        reference: { type: 'string', example: '', nullable: true },
+        isHighPriority: { type: 'boolean', example: false },
+        createdAt: { type: 'string', example: '2026-07-05 08:57:51' },
+        updatedAt: { type: 'string', example: '2026-07-05 08:57:51' },
       },
     },
-    CreateCaptainRequest: {
+    FunctionName: {
+      type: 'object',
+      properties: {
+        id: { type: 'integer', example: 1 },
+        uuid: { type: 'string', format: 'uuid' },
+        name: { type: 'string', example: 'Mehendi Ceremony' },
+        sortOrder: { type: 'integer', example: 2 },
+        isActive: { type: 'boolean', example: true },
+        createdAt: { type: 'string', format: 'date-time' },
+        updatedAt: { type: 'string', format: 'date-time' },
+      },
+    },
+    FunctionNameSelectList: {
+      type: 'object',
+      description: 'Function name list for Create Event dropdown. Returned by `GET /function-names?forSelect=true`.',
+      properties: {
+        items: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/FunctionName' },
+        },
+      },
+      example: {
+        items: [
+          { id: 1, uuid: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', name: 'Breakfast', sortOrder: 1, isActive: true },
+          { id: 2, uuid: 'b2c3d4e5-f6a7-8901-bcde-f12345678901', name: 'Mehendi Ceremony', sortOrder: 2, isActive: true },
+          { id: 3, uuid: 'c3d4e5f6-a7b8-9012-cdef-123456789012', name: 'Sangeet', sortOrder: 3, isActive: true },
+        ],
+      },
+    },
+    CreateFunctionNameRequest: {
       type: 'object',
       required: ['name'],
       properties: {
-        name: { type: 'string', example: 'Amit Patel' },
+        name: { type: 'string', example: 'Reception' },
+        sortOrder: { type: 'integer', minimum: 0, default: 0 },
         isActive: { type: 'boolean', default: true },
+      },
+    },
+    UpdateFunctionNameRequest: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', example: 'Wedding Reception' },
+        sortOrder: { type: 'integer', minimum: 0 },
+        isActive: { type: 'boolean' },
       },
     },
     CreateManagerRequest: {
@@ -481,23 +543,43 @@ const components = {
         name: { type: 'string', example: 'Julian Reed', description: 'Alias for memberName' },
         designation: { type: 'string', example: 'Content Strategist', nullable: true },
         isActive: { type: 'boolean', default: true },
+        email: { type: 'string', format: 'email', description: 'Optional portal login email (registers manager when password is also sent)' },
+        username: { type: 'string', format: 'email', description: 'Alias for email' },
+        password: { type: 'string', minLength: 6, description: 'Optional portal login password' },
       },
       example: {
         memberName: 'Julian Reed',
         designation: 'Content Strategist',
       },
     },
+    RegisterManagerRequest: {
+      type: 'object',
+      required: ['password'],
+      description:
+        'Set manager portal login credentials. Use `email` (or `username` as alias) plus `password`. Manager logs in at POST /api/manager/auth/login with identifier=email.',
+      properties: {
+        email: { type: 'string', format: 'email', example: 'manager@example.com', description: 'Login email / username' },
+        username: { type: 'string', format: 'email', example: 'manager@example.com', description: 'Alias for email' },
+        password: { type: 'string', minLength: 6, example: 'secret123' },
+      },
+      example: {
+        email: 'manager@example.com',
+        password: 'secret123',
+      },
+    },
     CreateClientRequest: {
       type: 'object',
-      required: ['name', 'catererName', 'cityName', 'contactNo', 'reference'],
+      required: ['name'],
+      description: 'Quick-add from Create Event uses name only; other fields can be filled later on the event form.',
       properties: {
-        name: { type: 'string', example: 'Rajesh Kumar' },
-        catererName: { type: 'string', example: 'Sai Caterer' },
-        cityName: { type: 'string', example: 'Baroda' },
-        contactNo: { type: 'string', example: '+918264737487' },
-        reference: { type: 'string', example: 'Friend' },
+        name: { type: 'string', example: 'testy' },
+        catererName: { type: 'string', example: 'Sai Caterer', nullable: true },
+        cityName: { type: 'string', example: 'Baroda', nullable: true },
+        contactNo: { type: 'string', example: '+918264737487', nullable: true },
+        reference: { type: 'string', example: 'Friend', nullable: true },
         isHighPriority: { type: 'boolean', default: false },
       },
+      example: { name: 'testy' },
     },
     Inquiry: {
       type: 'object',
@@ -761,9 +843,12 @@ const components = {
         id: { type: 'integer' },
         uuid: { type: 'string', format: 'uuid' },
         name: { type: 'string' },
-        role: { type: 'string', enum: ['event_manager', 'waiter', 'captain', 'other'] },
+        role: { type: 'string', enum: ['event_manager', 'waiter', 'other'] },
         designation: { type: 'string', nullable: true },
         isActive: { type: 'boolean' },
+        userId: { type: 'integer', nullable: true, description: 'Linked portal user ID when registered' },
+        email: { type: 'string', format: 'email', nullable: true, description: 'Portal login email when registered' },
+        isRegistered: { type: 'boolean', description: 'True when manager has portal login credentials' },
       },
     },
     CreateStaffRequest: {
@@ -771,7 +856,7 @@ const components = {
       required: ['name'],
       properties: {
         name: { type: 'string', example: 'Amit Patel' },
-        role: { type: 'string', enum: ['event_manager', 'waiter', 'captain', 'other'] },
+        role: { type: 'string', enum: ['event_manager', 'waiter', 'other'] },
         isActive: { type: 'boolean', default: true },
       },
     },
@@ -782,7 +867,7 @@ const components = {
           type: 'object',
           properties: {
             isActive: { type: 'boolean' },
-            role: { type: 'string', enum: ['event_manager', 'waiter', 'captain', 'other'] },
+            role: { type: 'string', enum: ['event_manager', 'waiter', 'other'] },
           },
         },
       ],
@@ -871,6 +956,70 @@ const components = {
         },
       },
     },
+    TeamAllocationStaffSubTask: {
+      type: 'object',
+      properties: {
+        id: { type: 'integer', description: 'Event task ID' },
+        task_template_id: { oneOf: [{ type: 'integer' }, { type: 'string', format: 'uuid' }], nullable: true },
+        title: { type: 'string' },
+        description: { type: 'string', nullable: true },
+        due_date: { type: 'string', format: 'date', nullable: true },
+        status: {
+          type: 'string',
+          enum: ['pending', 'assigned', 'in_progress', 'completed', 'overdue'],
+        },
+      },
+    },
+    TeamAllocationStaffTask: {
+      type: 'object',
+      properties: {
+        id: { type: 'integer', description: 'Event task ID' },
+        task_template_id: { oneOf: [{ type: 'integer' }, { type: 'string', format: 'uuid' }], nullable: true },
+        name: { type: 'string', description: 'Assigned task title' },
+        description: { type: 'string', nullable: true },
+        due_date: { type: 'string', format: 'date', nullable: true },
+        status: {
+          type: 'string',
+          enum: ['pending', 'assigned', 'in_progress', 'completed', 'overdue'],
+        },
+        isAssigned: {
+          type: 'boolean',
+          description: 'Always true in this list — only assigned operational tasks are returned',
+        },
+        isCompleted: {
+          type: 'boolean',
+          description: 'True when the manager has marked this task completed',
+        },
+        updatedAt: { type: 'string', format: 'date-time', nullable: true },
+      },
+    },
+    TeamAllocationStaffTasks: {
+      type: 'object',
+      properties: {
+        staff: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            name: { type: 'string' },
+            role: { type: 'string' },
+          },
+        },
+        summary: {
+          type: 'object',
+          description: 'Assigned task progress for admin manager view',
+          properties: {
+            total: { type: 'integer', description: 'Total assigned tasks on this team board' },
+            completed: { type: 'integer', description: 'Tasks with status completed' },
+            pending: { type: 'integer', description: 'Tasks not yet completed' },
+            tasksCompletedLabel: { type: 'string', example: '2/5' },
+          },
+        },
+        tasks: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/TeamAllocationStaffTask' },
+        },
+      },
+    },
     AssignTeamTasksRequest: {
       type: 'object',
       required: ['tasks'],
@@ -901,6 +1050,26 @@ const components = {
         description: { type: 'string', nullable: true },
         category: { type: 'string', nullable: true },
         isActive: { type: 'boolean' },
+      },
+    },
+    EventTaskAssignment: {
+      type: 'object',
+      properties: {
+        id: { type: 'integer' },
+        uuid: { type: 'string', format: 'uuid' },
+        eventId: { type: 'integer' },
+        eventUuid: { type: 'string', format: 'uuid', nullable: true },
+        eventClientName: { type: 'string', nullable: true },
+        eventVenue: { type: 'string', nullable: true },
+        taskTemplateId: { type: 'integer', nullable: true },
+        title: { type: 'string' },
+        description: { type: 'string', nullable: true },
+        status: { type: 'string', enum: ['pending', 'assigned', 'in_progress', 'completed', 'overdue'] },
+        assignedTo: { oneOf: [{ type: 'integer' }, { type: 'string' }], nullable: true, description: 'Manager staff ID' },
+        assigneeName: { type: 'string', nullable: true, description: 'Manager name' },
+        dueDate: { type: 'string', format: 'date-time', nullable: true },
+        createdAt: { type: 'string', format: 'date-time' },
+        updatedAt: { type: 'string', format: 'date-time' },
       },
     },
     CreateTaskRequest: {
@@ -1146,6 +1315,34 @@ const components = {
         previewedAt: { type: 'string', format: 'date-time', nullable: true },
       },
     },
+    SaveManagerCostRequest: {
+      type: 'object',
+      properties: {
+        clientCost: { type: 'number', minimum: 0, nullable: true, example: 3500 },
+        tabletCost: { type: 'number', minimum: 0, nullable: true },
+        transportationCost: { type: 'number', minimum: 0, nullable: true },
+        assignManagerCost: { type: 'number', minimum: 0, nullable: true },
+        photographyVideographyCost: { type: 'number', minimum: 0, nullable: true },
+        otherCharges: { type: 'number', minimum: 0, nullable: true },
+      },
+    },
+    EventManagerCost: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', nullable: true },
+        eventId: { type: 'string' },
+        eventDetails: { type: 'string', description: 'Read-only event label (client name)' },
+        clientCost: { type: 'number', nullable: true, example: 3500 },
+        tabletCost: { type: 'number', nullable: true },
+        transportationCost: { type: 'number', nullable: true },
+        assignManagerCost: { type: 'number', nullable: true },
+        photographyVideographyCost: { type: 'number', nullable: true },
+        otherCharges: { type: 'number', nullable: true },
+        totalCost: { type: 'number', example: 3500 },
+        filled: { type: 'boolean', description: 'True when cost data has been saved at least once' },
+        updatedAt: { type: 'string', format: 'date-time', nullable: true },
+      },
+    },
     TableAssignment: {
       type: 'object',
       required: ['tableNumber', 'allocationType'],
@@ -1175,6 +1372,20 @@ const components = {
         staffId: { oneOf: [{ type: 'integer' }, { type: 'string', format: 'uuid' }], description: 'Manager staff ID (numeric or UUID)' },
         tableNumbers: { type: 'array', minItems: 1, items: { type: 'integer', minimum: 1 }, example: [1, 2, 3] },
         allocationType: { type: 'string', enum: ['dining', 'captain'], default: 'dining' },
+      },
+    },
+    AssignEventManagersRequest: {
+      type: 'object',
+      required: ['assignedManagerIds'],
+      properties: {
+        assignedManagerIds: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 50,
+          items: { oneOf: [{ type: 'integer' }, { type: 'string', format: 'uuid' }] },
+          description: 'Event manager staff IDs from GET /managers?forSelect=true. First ID becomes the primary assigned manager.',
+          example: [1, 2],
+        },
       },
     },
     BulkTablesRequest: {

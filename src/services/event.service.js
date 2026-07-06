@@ -2,6 +2,7 @@ const eventRepository = require('../repositories/event.repository');
 const inquiryRepository = require('../repositories/inquiry.repository');
 const activityRepository = require('../repositories/activity.repository');
 const clientRepository = require('../repositories/client.repository');
+const staffRepository = require('../repositories/staff.repository');
 const { resolveId, resolveIds } = require('../helpers/idResolver');
 const { sendExport } = require('../helpers/exportImport');
 const { eventStatuses, eventMetaStatuses } = require('../validations/event.validation');
@@ -87,13 +88,19 @@ const normalizeFunctionInput = (fn) => {
 };
 
 async function resolveAssignedManagers(data) {
-  const managerIds = data.justTapInformation?.assignedManagerIds ?? data.assignedManagerIds;
-  const managerId = data.justTapInformation?.assignedManagerId ?? data.assignedManagerId;
+  const justTap = data.justTapInformation || {};
+  const managerIds = justTap.assignedManagerIds ?? data.assignedManagerIds;
+  const captainIds = justTap.assignedCaptainIds;
+  const managerId = justTap.assignedManagerId ?? data.assignedManagerId;
 
-  if (managerIds !== undefined) {
-    const staffIds = managerIds.length
-      ? await resolveIds('staff', managerIds)
+  if (managerIds !== undefined || captainIds !== undefined) {
+    const resolvedManagerIds = managerIds !== undefined
+      ? (managerIds.length ? await resolveIds('staff', managerIds) : [])
       : [];
+    const resolvedCaptainIds = captainIds !== undefined
+      ? (captainIds.length ? await resolveIds('staff', captainIds) : [])
+      : [];
+    const staffIds = [...new Set([...resolvedManagerIds, ...resolvedCaptainIds])];
     return { staffIds, assignedManagerId: staffIds[0] || null };
   }
 
@@ -109,22 +116,11 @@ async function resolveAssignedManagers(data) {
   return null;
 }
 
-async function resolveAssignedCaptains(data) {
-  const captainIds = data.justTapInformation?.assignedCaptainIds;
-  if (captainIds === undefined) return null;
-  const staffIds = captainIds.length
-    ? await resolveIds('staff', captainIds)
-    : [];
-  return staffIds;
-}
-
 function enrichTabFourResponse(event, {
   managerAllocations,
-  captainAllocations,
   brideGroomImageUrls,
 }) {
   const managerNames = managerAllocations.map((m) => m.name).filter(Boolean);
-  const captainNames = captainAllocations.map((c) => c.name).filter(Boolean);
 
   return {
     ...event,
@@ -133,8 +129,6 @@ function enrichTabFourResponse(event, {
     managerName: managerNames.join(', ') || event.managerName || null,
     justTapInformation: {
       ...event.justTapInformation,
-      assignedCaptainIds: captainAllocations.map((c) => c.id),
-      captainNames,
       assignedManagerIds: managerAllocations.map((m) => m.id),
       managerNames,
     },
@@ -171,7 +165,7 @@ async function resolveClientDetails(data) {
     client_address: clientAddress,
     city_name: data.cityName,
     contact_no: data.clientMobile,
-    reference: data.reference,
+    reference: data.reference ?? null,
     is_high_priority: data.isHighPriority,
   });
 
@@ -182,7 +176,7 @@ async function resolveClientDetails(data) {
     cityName: data.cityName,
     catererName: data.catererName || clientAddress || data.clientName,
     clientAddress,
-    reference: data.reference,
+    reference: data.reference ?? null,
     isHighPriority: Boolean(data.isHighPriority),
   };
 }
@@ -230,7 +224,6 @@ const eventService = {
         name: event.manager_name,
       }];
     }
-    const captainAllocations = await eventRepository.getCaptainAllocations(id);
     const brideGroomImageUrls = await eventRepository.getBrideGroomImages(id);
     return enrichTabFourResponse(
       {
@@ -244,7 +237,7 @@ const eventService = {
           isVeg: Boolean(m.is_veg),
         })),
       },
-      { managerAllocations, captainAllocations, brideGroomImageUrls }
+      { managerAllocations, brideGroomImageUrls }
     );
   },
 
@@ -265,7 +258,6 @@ const eventService = {
     }
 
     const managerAssignment = await resolveAssignedManagers(data);
-    const captainIds = await resolveAssignedCaptains(data);
     const clientDetails = await resolveClientDetails(data);
 
     const eventId = await eventRepository.create({
@@ -298,10 +290,6 @@ const eventService = {
 
     if (managerAssignment) {
       await eventRepository.setManagerAllocations(eventId, managerAssignment.staffIds);
-    }
-
-    if (captainIds) {
-      await eventRepository.setCaptainAllocations(eventId, captainIds);
     }
 
     if (data.brideGroomInformation?.imageUrls) {
@@ -353,18 +341,13 @@ const eventService = {
       await eventRepository.setManagerAllocations(id, managerAssignment.staffIds);
     }
 
-    const captainIds = await resolveAssignedCaptains(data);
-    if (captainIds) {
-      await eventRepository.setCaptainAllocations(id, captainIds);
-    }
-
     await eventRepository.update(id, {
       client_id: data.clientId !== undefined ? (data.clientId ? await resolveId('clients', data.clientId) : null) : undefined,
       client_name: data.clientName,
       client_mobile: data.clientMobile,
       caterer_name: data.catererName,
       client_address: data.clientAddress,
-      reference: data.reference,
+      reference: data.reference ?? null,
       is_high_priority: data.isHighPriority,
       venue_name: data.venueName,
       city_name: data.cityName,
@@ -399,6 +382,43 @@ const eventService = {
       action: 'event_updated',
       description: `Event ${id} updated`,
       metadata: { status: data.status },
+    });
+
+    return this.getById(id);
+  },
+
+  async assignManagers(idOrUuid, data, userId) {
+    const id = await resolveId('events', idOrUuid);
+    const event = await eventRepository.findById(id);
+    if (!event) throw new AppError('Event not found', 404);
+
+    const staffIds = data.assignedManagerIds?.length
+      ? await resolveIds('staff', data.assignedManagerIds)
+      : [];
+    if (!staffIds.length) {
+      throw new AppError('At least one manager must be assigned', 400);
+    }
+
+    for (const staffId of staffIds) {
+      const staff = await staffRepository.findById(staffId);
+      if (!staff || staff.role !== 'event_manager') {
+        throw new AppError('One or more selected staff members are not event managers', 422);
+      }
+      if (!staff.is_active) {
+        throw new AppError(`Manager is inactive: ${staff.name}`, 422);
+      }
+    }
+
+    const assignedManagerId = staffIds[0];
+    await eventRepository.setManagerAllocations(id, staffIds);
+    await eventRepository.update(id, { assigned_manager_id: assignedManagerId });
+
+    await activityRepository.log({
+      eventId: id,
+      userId,
+      action: 'event_managers_assigned',
+      description: `Event assigned to ${staffIds.length} manager(s)`,
+      metadata: { assignedManagerIds: staffIds },
     });
 
     return this.getById(id);

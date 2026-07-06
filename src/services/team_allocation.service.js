@@ -25,6 +25,15 @@ const teamAllocationService = {
     return report;
   },
 
+  async getStaffTasks(teamType, staffId) {
+    assertTeamType(teamType);
+    const result = await teamAllocationRepository.getStaffTasks(teamType, staffId);
+    if (!result) {
+      throw new AppError('Staff member not found', 404);
+    }
+    return result;
+  },
+
   async assignTasksToStaff(teamType, staffId, data) {
     assertTeamType(teamType);
 
@@ -43,9 +52,16 @@ const teamAllocationService = {
       throw new AppError('No active event found for assignment', 422);
     }
 
-    const assignedTo = Number(staffId);
-    const created = await taskRepository.assignToEvent(eventId, tasks, assignedTo);
-    return { assigned: created.length, taskIds: created };
+    const parentTaskTemplateId =
+      await teamAllocationRepository.ensureParentTemplateId(teamType);
+
+    const assignedTo = Number(data.assignedTo || staffId);
+    await taskRepository.assignToEvent(eventId, tasks, assignedTo, {
+      teamType,
+      parentTaskTemplateId,
+    });
+
+    return teamAllocationRepository.getStaffTasks(teamType, staffId);
   },
 };
 

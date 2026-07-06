@@ -24,9 +24,16 @@ const staffService = {
   },
 
   async create(data) {
+    const name = data.name?.trim();
+    const role = data.role || 'event_manager';
+    const existing = await staffRepository.findByNameAndRole(name, role);
+    if (existing) {
+      return staffRepository.formatStaff(existing);
+    }
+
     const id = await staffRepository.create({
-      name: data.name,
-      role: data.role,
+      name,
+      role,
       is_active: data.isActive,
     });
     return this.getById(id);
@@ -86,9 +93,16 @@ const staffService = {
   async importRecords(records) {
     const created = [];
     for (const record of records) {
+      const name = record.name?.trim();
+      const role = record.role || 'event_manager';
+      const existing = await staffRepository.findByNameAndRole(name, role);
+      if (existing) {
+        created.push(existing.id);
+        continue;
+      }
       const id = await staffRepository.create({
-        name: record.name,
-        role: record.role || 'event_manager',
+        name,
+        role,
         is_active: record.isActive !== false,
       });
       created.push(id);

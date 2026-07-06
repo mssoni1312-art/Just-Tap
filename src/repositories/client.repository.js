@@ -69,7 +69,7 @@ const clientRepository = {
         data.client_address || null,
         data.city_name,
         data.contact_no || null,
-        data.reference,
+        data.reference ?? '',
         data.is_high_priority ? 1 : 0,
       ]
     );

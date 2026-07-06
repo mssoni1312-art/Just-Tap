@@ -32,7 +32,6 @@ const managerFunctionSchema = Joi.object({
   date: Joi.date().iso().allow(null),
   startTime: Joi.string().allow(null, ''),
   endTime: Joi.string().allow(null, ''),
-  pax: Joi.number().integer().min(1).allow(null),
   venue: Joi.string().allow(null, ''),
   subVenueRemarks: Joi.string().allow(null, ''),
   rate: Joi.number().min(0).allow(null),

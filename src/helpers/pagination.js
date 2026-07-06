@@ -26,6 +26,7 @@ const ALLOWED_SORT_COLUMNS = {
   feedback_questions: ['sort_order', 'created_at', 'question_text'],
   staff: ['name', 'role', 'created_at'],
   clients: ['name', 'city_name', 'created_at'],
+  function_names: ['sort_order', 'name', 'created_at'],
   task_templates: ['name', 'category', 'created_at'],
   event_tasks: ['due_date', 'status', 'created_at', 'title'],
 };

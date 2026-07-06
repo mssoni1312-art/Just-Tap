@@ -5,4 +5,11 @@ module.exports = {
   list: async (req, res) => sendSuccess(res, await managerService.list(req.query)),
   create: async (req, res) =>
     sendSuccess(res, await managerService.create(req.body), 'Manager created', 201),
+  register: async (req, res) =>
+    sendSuccess(
+      res,
+      await managerService.register(req.params.id, req.body),
+      'Manager registered successfully',
+      201
+    ),
 };

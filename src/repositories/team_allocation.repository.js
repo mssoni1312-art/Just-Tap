@@ -4,7 +4,7 @@ const tableRepository = require('./table.repository');
 const TEAM_TYPES = {
   justTap: {
     categories: ['service'],
-    keywords: ['just tap', 'tap'],
+    keywords: ['just tap', 'justtap', 'tap'],
   },
   justSocial: {
     categories: ['service', 'marketing'],
@@ -13,6 +13,27 @@ const TEAM_TYPES = {
   photoVideo: {
     categories: ['media', 'service'],
     keywords: ['photo', 'video', 'videography', 'photography'],
+  },
+};
+
+const TEAM_PARENT_TEMPLATE_SEEDS = {
+  justTap: {
+    uuid: 'f1000000-0000-4000-8000-000000000101',
+    name: 'Just Tap',
+    description: 'On-ground Just Tap service for event operations',
+    category: 'service',
+  },
+  justSocial: {
+    uuid: 'f1000000-0000-4000-8000-000000000102',
+    name: 'Just Social',
+    description: 'Social media promotion and engagement service',
+    category: 'service',
+  },
+  photoVideo: {
+    uuid: 'f1000000-0000-4000-8000-000000000103',
+    name: 'Photography & Videography',
+    description: 'Professional photography and videography coverage',
+    category: 'service',
   },
 };
 
@@ -25,13 +46,17 @@ const matchesTeam = (teamType, task) => {
   const config = TEAM_TYPES[teamType];
   if (!config || !task) return false;
 
-  const category = (task.templateCategory || '').toLowerCase();
+  const category = (task.templateCategory || task.category || '').toLowerCase();
   const haystack = `${task.title || ''} ${task.templateName || ''}`.toLowerCase();
+  const compactHaystack = haystack.replace(/\s+/g, '');
   const categoryMatch = config.categories.includes(category);
-  const keywordMatch = config.keywords.some((keyword) => haystack.includes(keyword));
+  const keywordMatch = config.keywords.some(
+    (keyword) =>
+      haystack.includes(keyword) || compactHaystack.includes(keyword.replace(/\s+/g, ''))
+  );
 
   if (teamType === 'justTap') {
-    return categoryMatch && keywordMatch;
+    return categoryMatch && (keywordMatch || compactHaystack.includes('justtap'));
   }
 
   return categoryMatch && keywordMatch;
@@ -84,7 +109,6 @@ const fetchStaffTasks = async () => {
        ON tt.id = et.task_template_id
        AND tt.deleted_at IS NULL
      WHERE s.deleted_at IS NULL
-       AND s.is_active = 1
        AND s.role = 'event_manager'
      ORDER BY s.name ASC, et.updated_at DESC`
   );
@@ -179,12 +203,10 @@ const teamAllocationRepository = {
 
   async getAllocation(teamType) {
     const staffMembers = await fetchStaffTasks();
-    const members = staffMembers
-      .map((member) => {
-        const teamTasks = member.tasks.filter((task) => matchesTeam(teamType, task));
-        return { ...member, teamTasks };
-      })
-      .filter((member) => member.teamTasks.length > 0 || staffMembers.length <= 12);
+    const members = staffMembers.map((member) => {
+      const teamTasks = member.tasks.filter((task) => matchesTeam(teamType, task));
+      return { ...member, teamTasks };
+    });
 
     const taskCounts = members.map((member) => member.teamTasks.length);
     const maxTaskCount = taskCounts.length ? Math.max(...taskCounts) : 0;
@@ -223,6 +245,127 @@ const teamAllocationRepository = {
     };
   },
 
+  async resolveParentTemplates(teamType) {
+    const seed = TEAM_PARENT_TEMPLATE_SEEDS[teamType];
+    if (seed) {
+      const [byUuid] = await pool.execute(
+        `SELECT id, uuid, name, description, category, is_active AS isActive
+         FROM task_templates
+         WHERE uuid = ?
+           AND deleted_at IS NULL
+           AND is_active = 1`,
+        [seed.uuid]
+      );
+      if (byUuid.length) return byUuid;
+    }
+
+    const [templateRows] = await pool.execute(
+      `SELECT id, uuid, name, description, category, is_active AS isActive
+       FROM task_templates
+       WHERE deleted_at IS NULL
+         AND is_active = 1
+       ORDER BY name ASC`
+    );
+
+    return templateRows.filter((row) =>
+      matchesTeam(teamType, {
+        title: row.name,
+        templateName: row.name,
+        templateCategory: row.category,
+      })
+    );
+  },
+
+  async resolveParentTemplateId(teamType) {
+    const parents = await this.resolveParentTemplates(teamType);
+    return parents[0]?.id || null;
+  },
+
+  async ensureParentTemplateId(teamType) {
+    const existingId = await this.resolveParentTemplateId(teamType);
+    if (existingId) return existingId;
+
+    const seed = TEAM_PARENT_TEMPLATE_SEEDS[teamType];
+    if (!seed) return null;
+
+    const [existingRows] = await pool.execute(
+      `SELECT id FROM task_templates WHERE uuid = ? LIMIT 1`,
+      [seed.uuid]
+    );
+
+    if (existingRows[0]?.id) {
+      await pool.execute(
+        `UPDATE task_templates
+         SET name = ?, description = ?, category = ?, is_active = 1, deleted_at = NULL
+         WHERE id = ?`,
+        [seed.name, seed.description, seed.category, existingRows[0].id]
+      );
+      return existingRows[0].id;
+    }
+
+    const [result] = await pool.execute(
+      `INSERT INTO task_templates (uuid, name, description, category, is_active)
+       VALUES (?, ?, ?, ?, 1)`,
+      [seed.uuid, seed.name, seed.description, seed.category]
+    );
+
+    return result.insertId;
+  },
+
+  async getStaffTasks(teamType, staffId) {
+    const staff = await this.findStaffById(staffId);
+    if (!staff) return null;
+
+    const [subTaskRows] = await pool.execute(
+      `SELECT
+         et.id,
+         et.task_template_id,
+         et.title,
+         et.description,
+         et.due_date,
+         et.status,
+         et.updated_at AS updatedAt
+       FROM event_tasks et
+       WHERE et.deleted_at IS NULL
+         AND et.assigned_to = ?
+         AND et.team_type = ?
+       ORDER BY
+         CASE WHEN et.status = 'completed' THEN 1 ELSE 0 END,
+         et.created_at ASC`,
+      [staffId, teamType]
+    );
+
+    const tasks = subTaskRows.map((row) => ({
+      id: row.id,
+      task_template_id: row.task_template_id,
+      name: row.title,
+      description: row.description,
+      due_date: row.due_date,
+      status: row.status,
+      updatedAt: row.updatedAt,
+      isAssigned: true,
+      isCompleted: row.status === 'completed',
+    }));
+
+    const completed = tasks.filter((task) => task.isCompleted).length;
+    const pending = tasks.length - completed;
+
+    return {
+      staff: {
+        id: String(staff.id),
+        name: staff.name,
+        role: formatRole(staff.role),
+      },
+      summary: {
+        total: tasks.length,
+        completed,
+        pending,
+        tasksCompletedLabel: tasks.length > 0 ? `${completed}/${tasks.length}` : '0/0',
+      },
+      tasks,
+    };
+  },
+
   async getStaffReport(teamType, staffId) {
     const [staffRows] = await pool.execute(
       `SELECT id, name, role, is_active AS isActive
@@ -240,26 +383,16 @@ const teamAllocationRepository = {
          et.title,
          et.status,
          et.due_date AS dueDate,
-         et.updated_at AS updatedAt,
-         tt.name AS templateName,
-         tt.category AS templateCategory
+         et.updated_at AS updatedAt
        FROM event_tasks et
-       LEFT JOIN task_templates tt
-         ON tt.id = et.task_template_id
-         AND tt.deleted_at IS NULL
        WHERE et.deleted_at IS NULL
          AND et.assigned_to = ?
+         AND et.team_type = ?
        ORDER BY et.updated_at DESC`,
-      [staffId]
+      [staffId, teamType]
     );
 
-    const teamTasks = taskRows.filter((task) =>
-      matchesTeam(teamType, {
-        title: task.title,
-        templateName: task.templateName,
-        templateCategory: task.templateCategory,
-      })
-    );
+    const teamTasks = taskRows;
 
     const completed = teamTasks.filter((task) => task.status === 'completed');
     const pending = teamTasks.filter((task) => task.status !== 'completed');

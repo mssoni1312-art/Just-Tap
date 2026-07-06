@@ -8,6 +8,7 @@ const {
   createTaskSchema,
   updateTaskSchema,
   listTasksSchema,
+  listTaskAssignmentsSchema,
   bulkIdsSchema,
   exportQuerySchema,
 } = require('../validations/domain.validation');
@@ -18,6 +19,7 @@ router.use(authenticate, requireSuperAdmin);
 
 router.get('/summary', asyncHandler(taskController.summary));
 router.get('/export', validate(exportQuerySchema, 'query'), asyncHandler(taskController.export));
+router.get('/assignments', validate(listTaskAssignmentsSchema, 'query'), asyncHandler(taskController.listAssignments));
 router.get('/', validate(listTasksSchema, 'query'), asyncHandler(taskController.list));
 router.post('/', validate(createTaskSchema), asyncHandler(taskController.create));
 router.post('/bulk-delete', validate(bulkIdsSchema), asyncHandler(taskController.bulkDelete));

@@ -81,7 +81,7 @@ erDiagram
 
 | Table | Purpose | Soft Delete | UUID |
 |-------|---------|-------------|------|
-| `event_table_assignments` | Table / captain allocation | Yes | Yes |
+| `event_table_assignments` | Table allocation (dining / captain view) | Yes | Yes |
 | `task_templates` | Reusable task definitions | Yes | Yes |
 | `event_tasks` | Tasks per event | Yes | Yes |
 | `event_orders` | Live order session | Yes | Yes |

@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS staff (
   id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   uuid       CHAR(36)        NOT NULL DEFAULT (UUID()),
   name       VARCHAR(150)    NOT NULL,
-  role       ENUM('event_manager', 'waiter', 'captain', 'other') NOT NULL DEFAULT 'event_manager',
+  role       ENUM('event_manager', 'waiter', 'other') NOT NULL DEFAULT 'event_manager',
   is_active  TINYINT(1)      NOT NULL DEFAULT 1,
   created_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -315,7 +315,6 @@ CREATE TABLE IF NOT EXISTS events (
   assigned_manager_id  BIGINT UNSIGNED NULL,
   is_live              TINYINT(1)      NOT NULL DEFAULT 0,
   no_of_tablets        INT UNSIGNED    NULL,
-  no_of_captains       INT UNSIGNED    NULL,
   no_of_managers       INT UNSIGNED    NULL,
   tablet_service       VARCHAR(150)    NULL,
   media_client_address VARCHAR(255)    NULL,
@@ -483,6 +482,8 @@ CREATE TABLE IF NOT EXISTS event_tasks (
   status           ENUM('pending', 'assigned', 'in_progress', 'completed', 'overdue') NOT NULL DEFAULT 'pending',
   assigned_to      BIGINT UNSIGNED NULL,
   due_date         DATE            NULL,
+  team_type        ENUM('justTap', 'justSocial', 'photoVideo') NULL,
+  parent_task_template_id BIGINT UNSIGNED NULL,
   created_at       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   deleted_at       DATETIME        NULL,
@@ -493,12 +494,16 @@ CREATE TABLE IF NOT EXISTS event_tasks (
   KEY idx_event_tasks_due (due_date),
   KEY idx_event_tasks_assigned (assigned_to),
   KEY idx_event_tasks_deleted_at (deleted_at),
+  KEY idx_event_tasks_team_type (team_type),
+  KEY idx_event_tasks_parent_template (parent_task_template_id),
   CONSTRAINT fk_event_tasks_event
     FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE,
   CONSTRAINT fk_event_tasks_template
     FOREIGN KEY (task_template_id) REFERENCES task_templates (id) ON DELETE SET NULL,
   CONSTRAINT fk_event_tasks_staff
-    FOREIGN KEY (assigned_to) REFERENCES staff (id) ON DELETE SET NULL
+    FOREIGN KEY (assigned_to) REFERENCES staff (id) ON DELETE SET NULL,
+  CONSTRAINT fk_event_tasks_parent_template
+    FOREIGN KEY (parent_task_template_id) REFERENCES task_templates (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Migration 006: Live orders (event orders, tables, line items, batches)
@@ -959,22 +964,7 @@ WHERE e.assigned_manager_id IS NOT NULL
   );
 
 -- Migration 013: Create event tab 4 fields (Just Tap Information, Photography, Just Social, Bride/Groom, Pricing)
-
-CREATE TABLE IF NOT EXISTS event_captain_allocations (
-  id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  event_id   BIGINT UNSIGNED NOT NULL,
-  staff_id   BIGINT UNSIGNED NOT NULL,
-  created_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  deleted_at DATETIME        NULL,
-  PRIMARY KEY (id),
-  UNIQUE KEY uk_event_captain (event_id, staff_id),
-  KEY idx_eca_staff (staff_id),
-  CONSTRAINT fk_eca_event
-    FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE,
-  CONSTRAINT fk_eca_staff
-    FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- Note: event_captain_allocations removed in migration 027 — captain uses event_manager_allocations
 
 CREATE TABLE IF NOT EXISTS event_bride_groom_images (
   id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -1194,5 +1184,27 @@ CREATE TABLE IF NOT EXISTS event_all_task_attachments (
     FOREIGN KEY (upload_id) REFERENCES uploads (id) ON DELETE SET NULL,
   CONSTRAINT fk_eata_user
     FOREIGN KEY (uploaded_by) REFERENCES users (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Migration 030: Manager cost breakdown per event (Cost of Manager screen)
+
+CREATE TABLE IF NOT EXISTS event_manager_costs (
+  id                           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  event_id                     BIGINT UNSIGNED NOT NULL,
+  client_cost                  DECIMAL(12, 2)  NULL,
+  tablet_cost                  DECIMAL(12, 2)  NULL,
+  transportation_cost          DECIMAL(12, 2)  NULL,
+  assign_manager_cost          DECIMAL(12, 2)  NULL,
+  photography_videography_cost DECIMAL(12, 2)  NULL,
+  other_charges                DECIMAL(12, 2)  NULL,
+  total_cost                   DECIMAL(12, 2)  NOT NULL DEFAULT 0,
+  created_at                   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at                   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at                   DATETIME        NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_event_manager_costs_event (event_id),
+  KEY idx_event_manager_costs_deleted_at (deleted_at),
+  CONSTRAINT fk_event_manager_costs_event
+    FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

@@ -2,12 +2,14 @@ const pool = require('../config/database');
 
 const userRepository = {
   async findByEmailOrPhone(identifier) {
+    const normalized = String(identifier || '').trim();
+    const lookupEmail = normalized.includes('@') ? normalized.toLowerCase() : normalized;
     const [rows] = await pool.execute(
       `SELECT * FROM users
        WHERE deleted_at IS NULL AND status = 'active'
        AND (email = ? OR phone = ?)
        LIMIT 1`,
-      [identifier, identifier]
+      [lookupEmail, normalized]
     );
     return rows[0] || null;
   },
@@ -31,6 +33,15 @@ const userRepository = {
       passwordHash,
       id,
     ]);
+  },
+
+  async createManagerUser({ email, passwordHash, firstName, lastName, handle }) {
+    const [result] = await pool.execute(
+      `INSERT INTO users (email, password_hash, first_name, last_name, handle, role, status)
+       VALUES (?, ?, ?, ?, ?, 'manager', 'active')`,
+      [email, passwordHash, firstName, lastName || '', handle]
+    );
+    return result.insertId;
   },
 
   async updateProfile(id, data) {

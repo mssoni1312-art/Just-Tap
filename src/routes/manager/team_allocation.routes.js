@@ -28,6 +28,16 @@ router.get(
   ),
 );
 
+router.get(
+  '/:teamType/staff/:staffId/tasks',
+  asyncHandler(async (req, res) =>
+    sendSuccess(
+      res,
+      await teamAllocationService.getStaffTasks(req.params.teamType, req.params.staffId),
+    ),
+  ),
+);
+
 router.post(
   '/:teamType/staff/:staffId/tasks/assign',
   validate(assignTasksSchema),

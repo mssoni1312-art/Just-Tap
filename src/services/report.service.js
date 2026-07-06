@@ -7,6 +7,32 @@ const { buildPaginatedResponse } = require('../helpers/pagination');
 const AppError = require('../utils/AppError');
 
 const TEMPLATE_CATEGORIES = ['all', 'luxury', 'minimal', 'classic', 'custom'];
+const TEMPLATE_THEME_DEFAULTS = {
+  luxury: {
+    primary: { hex: '#A9A9A9', opacity: 100 },
+    secondary: { hex: '#D4AF37', opacity: 100 },
+    accent: { hex: '#FFFFFF', opacity: 100 },
+    background: { hex: '#1A1A1A', opacity: 100 },
+  },
+  classic: {
+    primary: { hex: '#D4AF37', opacity: 100 },
+    secondary: { hex: '#8B7355', opacity: 100 },
+    accent: { hex: '#FFFFFF', opacity: 100 },
+    background: { hex: '#0F0F0F', opacity: 100 },
+  },
+  minimal: {
+    primary: { hex: '#1A1A1A', opacity: 100 },
+    secondary: { hex: '#666666', opacity: 100 },
+    accent: { hex: '#FFFFFF', opacity: 100 },
+    background: { hex: '#F5F5F5', opacity: 100 },
+  },
+  custom: {
+    primary: { hex: '#A9A9A9', opacity: 100 },
+    secondary: { hex: '#D4AF37', opacity: 100 },
+    accent: { hex: '#FFFFFF', opacity: 100 },
+    background: { hex: '#1A1A1A', opacity: 100 },
+  },
+};
 const FONT_PAIRINGS = ['playfair_inter', 'space_grotesk_mono', 'fraunces_inter'];
 const GRID_PRESETS = ['compact', 'default', 'spacious'];
 const PHOTO_FILTER_PRESETS = ['none', 'vintage_gold', 'high_contrast', 'warm', 'cool', 'sepia'];
@@ -164,6 +190,21 @@ const reportService = {
     };
   },
 
+  async uploadTemplate(file, userId, body = {}) {
+    const upload = await uploadService.saveUpload(userId, file, 'image');
+    const name = String(body.name || 'Custom Design').trim() || 'Custom Design';
+
+    const template = await reportRepository.createTemplate({
+      name,
+      previewUrl: upload.url,
+      thumbnailUrl: upload.url,
+      category: 'custom',
+    });
+
+    if (!template) throw new AppError('Unable to save custom template', 500);
+    return template;
+  },
+
   async selectTemplate(reportIdOrUuid, data, userId) {
     const reportId = await resolveReportId(reportIdOrUuid);
     await assertReportAccess(reportId, userId);
@@ -173,6 +214,11 @@ const reportService = {
     if (!template) throw new AppError('Invalid template', 400);
 
     await reportRepository.updateMaster(reportId, { templateId }, userId);
+
+    const themeDefaults =
+      TEMPLATE_THEME_DEFAULTS[template.category] || TEMPLATE_THEME_DEFAULTS.classic;
+    await reportRepository.upsertTheme(reportId, themeDefaults);
+
     return reportRepository.findById(reportId);
   },
 

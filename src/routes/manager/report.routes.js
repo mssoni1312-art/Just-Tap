@@ -15,6 +15,7 @@ const {
   updateGridSchema,
   updatePhotoFilterSchema,
   uploadPhotoSchema,
+  uploadTemplateSchema,
   saveDraftSchema,
   publishReportSchema,
   shareReportSchema,
@@ -39,6 +40,12 @@ router.post(
 );
 router.delete('/photo/:photoId', validate(photoIdParamSchema, 'params'), asyncHandler(domain.report.deletePhoto));
 router.post('/template/select', validate(selectTemplateSchema), asyncHandler(domain.report.selectTemplate));
+router.post(
+  '/template/upload',
+  uploadImage.single('file'),
+  validate(uploadTemplateSchema),
+  asyncHandler(domain.report.uploadTemplate),
+);
 router.patch('/theme', validate(updateThemeSchema), asyncHandler(domain.report.updateTheme));
 router.patch('/typography', validate(updateTypographySchema), asyncHandler(domain.report.updateTypography));
 router.patch('/grid', validate(updateGridSchema), asyncHandler(domain.report.updateGrid));

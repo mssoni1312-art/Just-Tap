@@ -11,6 +11,12 @@ module.exports = {
   getById: async (req, res) => sendSuccess(res, await eventService.getById(req.params.id)),
   create: async (req, res) => sendSuccess(res, await eventService.create(req.body, req.user.id), 'Event created', 201),
   update: async (req, res) => sendSuccess(res, await eventService.update(req.params.id, req.body, req.user.id)),
+  assignManagers: async (req, res) =>
+    sendSuccess(
+      res,
+      await eventService.assignManagers(req.params.eventId, req.body, req.user.id),
+      'Event assigned to manager(s)',
+    ),
   remove: async (req, res) => sendSuccess(res, await eventService.delete(req.params.id, req.user.id)),
   bulkDelete: async (req, res) => sendSuccess(res, await eventService.bulkDelete(req.body.ids, req.user.id)),
   bulkUpdate: async (req, res) => sendSuccess(res, await eventService.bulkUpdate(req.body.ids, req.body.status, req.user.id)),

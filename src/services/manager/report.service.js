@@ -39,6 +39,8 @@ const managerReportService = {
     return reportService.uploadPhoto(reportId, file, userId, body);
   },
 
+  uploadTemplate: (file, userId, body) => reportService.uploadTemplate(file, userId, body),
+
   deletePhoto: async (staffId, photoId, userId) => {
     const numericPhotoId = Number(photoId);
     if (!Number.isInteger(numericPhotoId) || numericPhotoId <= 0) {

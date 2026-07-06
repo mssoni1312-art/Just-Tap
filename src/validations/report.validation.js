@@ -54,6 +54,10 @@ const uploadPhotoSchema = Joi.object({
   setAsBrideGroomPhoto: Joi.boolean().truthy('true').falsy('false').default(false),
 });
 
+const uploadTemplateSchema = Joi.object({
+  name: Joi.string().trim().max(150).allow('', null),
+});
+
 const saveDraftSchema = reportIdBody.keys({
   packageId: idParam.allow(null),
   includeMenuInTemplate: Joi.boolean(),
@@ -92,6 +96,7 @@ module.exports = {
   updateGridSchema,
   updatePhotoFilterSchema,
   uploadPhotoSchema,
+  uploadTemplateSchema,
   saveDraftSchema,
   publishReportSchema,
   shareReportSchema,

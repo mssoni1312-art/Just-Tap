@@ -1,6 +1,9 @@
 const pool = require('../config/database');
 const { parsePagination, buildPaginatedResponse, sanitizeSortBy } = require('../helpers/pagination');
 
+const STAFF_USER_JOIN =
+  'LEFT JOIN users u ON u.id = s.user_id AND u.deleted_at IS NULL';
+
 const formatStaff = (row) => ({
   id: row.id,
   uuid: row.uuid,
@@ -8,28 +11,51 @@ const formatStaff = (row) => ({
   role: row.role,
   designation: row.designation || null,
   isActive: Boolean(row.is_active),
+  userId: row.user_id || null,
+  email: row.user_email || null,
+  isRegistered: Boolean(row.user_id),
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
 
-const buildStaffWhere = (query) => {
-  const conditions = ['deleted_at IS NULL'];
+const buildStaffFilters = (query, alias = '') => {
+  const prefix = alias ? `${alias}.` : '';
+  const conditions = [`${prefix}deleted_at IS NULL`];
   const params = [];
+
   if (query.role) {
-    conditions.push('role = ?');
+    conditions.push(`${prefix}role = ?`);
     params.push(query.role);
   }
   if (query.isActive !== undefined) {
-    conditions.push('is_active = ?');
+    conditions.push(`${prefix}is_active = ?`);
     params.push(query.isActive ? 1 : 0);
   } else if (query.includeInactive !== 'true') {
-    conditions.push('is_active = 1');
+    conditions.push(`${prefix}is_active = 1`);
   }
   if (query.search) {
-    conditions.push('name LIKE ?');
+    conditions.push(`${prefix}name LIKE ?`);
     params.push(`%${query.search}%`);
   }
-  return { where: conditions.join(' AND '), params };
+
+  return { conditions, params };
+};
+
+const buildDedupedStaffQuery = (query) => {
+  const inner = buildStaffFilters(query);
+  const outer = buildStaffFilters(query, 's');
+  const dedupSubquery = `
+    SELECT MIN(id) AS id
+    FROM staff
+    WHERE ${inner.conditions.join(' AND ')}
+    GROUP BY LOWER(TRIM(name)), role
+  `;
+
+  return {
+    fromClause: `staff s`,
+    whereClause: `s.id IN (${dedupSubquery}) AND ${outer.conditions.join(' AND ')}`,
+    params: [...inner.params, ...outer.params],
+  };
 };
 
 const staffRepository = {
@@ -38,33 +64,68 @@ const staffRepository = {
   async findAll(query) {
     const { page, limit, offset, sortOrder } = parsePagination(query);
     const sortBy = sanitizeSortBy('staff', query.sortBy);
-    const { where, params } = buildStaffWhere(query);
+    const { whereClause, params } = buildDedupedStaffQuery(query);
 
-    const [countRows] = await pool.execute(`SELECT COUNT(*) AS total FROM staff WHERE ${where}`, params);
+    const [countRows] = await pool.execute(
+      `SELECT COUNT(*) AS total FROM staff s WHERE ${whereClause}`,
+      params
+    );
     const [rows] = await pool.execute(
-      `SELECT * FROM staff WHERE ${where} ORDER BY ${sortBy} ${sortOrder} LIMIT ${limit} OFFSET ${offset}`,
+      `SELECT s.*, u.email AS user_email
+       FROM staff s
+       ${STAFF_USER_JOIN}
+       WHERE ${whereClause}
+       ORDER BY s.${sortBy} ${sortOrder}
+       LIMIT ${limit} OFFSET ${offset}`,
       params
     );
     return buildPaginatedResponse(rows.map(formatStaff), countRows[0].total, page, limit);
   },
 
   async findAllForExport(query) {
-    const { where, params } = buildStaffWhere(query);
+    const { whereClause, params } = buildDedupedStaffQuery(query);
     const sortBy = sanitizeSortBy('staff', query.sortBy || 'name');
     const sortOrder = (query.sortOrder || 'asc').toLowerCase() === 'desc' ? 'DESC' : 'ASC';
     const [rows] = await pool.execute(
-      `SELECT * FROM staff WHERE ${where} ORDER BY ${sortBy} ${sortOrder}`,
+      `SELECT s.*, u.email AS user_email
+       FROM staff s
+       ${STAFF_USER_JOIN}
+       WHERE ${whereClause}
+       ORDER BY s.${sortBy} ${sortOrder}`,
       params
     );
     return rows.map(formatStaff);
   },
 
+  async findByNameAndRole(name, role) {
+    const [rows] = await pool.execute(
+      `SELECT * FROM staff
+       WHERE deleted_at IS NULL
+         AND role = ?
+         AND LOWER(TRIM(name)) = LOWER(TRIM(?))
+       ORDER BY id ASC
+       LIMIT 1`,
+      [role, name]
+    );
+    return rows[0] || null;
+  },
+
   async findById(id) {
     const [rows] = await pool.execute(
-      'SELECT * FROM staff WHERE id = ? AND deleted_at IS NULL',
+      `SELECT s.*, u.email AS user_email
+       FROM staff s
+       ${STAFF_USER_JOIN}
+       WHERE s.id = ? AND s.deleted_at IS NULL`,
       [id]
     );
     return rows[0] || null;
+  },
+
+  async linkUserId(staffId, userId) {
+    await pool.execute(
+      'UPDATE staff SET user_id = ?, updated_at = NOW() WHERE id = ? AND deleted_at IS NULL',
+      [userId, staffId]
+    );
   },
 
   async findByUserId(userId) {

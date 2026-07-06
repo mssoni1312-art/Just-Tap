@@ -33,6 +33,13 @@ module.exports = {
     ),
   selectTemplate: async (req, res) =>
     sendSuccess(res, await reportService.selectTemplate(req.body.reportId, req.body, req.user.id), 'Template selected'),
+  uploadTemplate: async (req, res) =>
+    sendSuccess(
+      res,
+      await reportService.uploadTemplate(req.file, req.user.id, req.body),
+      'Template uploaded',
+      201,
+    ),
   updateTheme: async (req, res) =>
     sendSuccess(res, await reportService.updateTheme(req.body.reportId, req.body, req.user.id), 'Theme updated'),
   updateTypography: async (req, res) =>

@@ -96,6 +96,44 @@ const reportRepository = {
     return rows[0] ? formatTemplate(rows[0]) : null;
   },
 
+  async createTemplate({ name, previewUrl, thumbnailUrl, category = 'custom' }) {
+    const baseSlug = String(name || 'custom-design')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 80) || 'custom-design';
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const slug = attempt === 0 ? baseSlug : `${baseSlug}-${Date.now()}-${attempt}`;
+      try {
+        const [result] = await pool.execute(
+          `INSERT INTO report_templates
+           (name, slug, category, description, preview_url, thumbnail_url, sort_order)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            name,
+            slug,
+            category,
+            'Custom uploaded design',
+            previewUrl,
+            thumbnailUrl || previewUrl,
+            999,
+          ]
+        );
+
+        const [rows] = await pool.execute(
+          `SELECT * FROM report_templates WHERE id = ? LIMIT 1`,
+          [result.insertId]
+        );
+        return rows[0] ? formatTemplate(rows[0]) : null;
+      } catch (err) {
+        if (err.code !== 'ER_DUP_ENTRY') throw err;
+      }
+    }
+
+    throw new Error('Unable to create custom template');
+  },
+
   async findByEventId(eventId) {
     const [rows] = await pool.execute(
       `SELECT id FROM report_master WHERE event_id = ? AND deleted_at IS NULL LIMIT 1`,

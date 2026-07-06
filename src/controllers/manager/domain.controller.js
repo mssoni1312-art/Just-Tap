@@ -90,6 +90,13 @@ module.exports = {
           req.user.id
         )
       ),
+    uploadTemplate: async (req, res) =>
+      sendSuccess(
+        res,
+        await managerReportService.uploadTemplate(req.file, req.user.id, req.body),
+        'Template uploaded',
+        201
+      ),
     updateTheme: async (req, res) =>
       sendSuccess(
         res,

@@ -107,6 +107,17 @@ const eventsPaths = {
       successDescription: 'Tasks assigned',
     }),
   },
+  '/events/{eventId}/assign-managers': {
+    post: op('post', ['Events', 'Managers'], 'Assign event to manager(s)', {
+      operationId: 'eventAssignManagers',
+      description:
+        'Assigns an event to one or more event managers. Updates `event_manager_allocations` and sets the primary `assigned_manager_id` to the first ID in the list. Use `GET /managers?forSelect=true` to populate the manager dropdown.',
+      parameters: [eventIdParam],
+      requestBody: jsonBody('AssignEventManagersRequest', true, { assignedManagerIds: [1, 2] }),
+      successDescription: 'Event assigned to manager(s)',
+      responseSchema: 'EventDetail',
+    }),
+  },
   '/events/{eventId}/functions': {
     post: op('post', ['Events'], 'Add event function', {
       operationId: 'eventFunctionAdd',
@@ -317,6 +328,17 @@ const eventsPaths = {
       successDescription: 'Billing saved; visible in client app when showToClient is true',
     }),
   },
+  '/events/{eventId}/manager-cost': {
+    get: op('get', ['Events', 'Manager Cost'], 'Get manager cost breakdown', {
+      operationId: 'eventManagerCostGet',
+      parameters: [eventIdParam],
+      responseSchema: 'EventManagerCost',
+    }),
+    put: op('put', ['Events', 'Manager Cost'], 'Save manager cost breakdown', {
+      operationId: 'eventManagerCostSave',
+      parameters: [eventIdParam],
+      requestBody: jsonBody('SaveManagerCostRequest', true),
+      responseSchema: 'EventManagerCost',
+    }),
+  },
 };
-
-module.exports = eventsPaths;

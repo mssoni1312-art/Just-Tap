@@ -36,7 +36,6 @@ const formatEvent = (row) => ({
   managerName: row.manager_name || null,
   justTapInformation: {
     noOfTablets: row.no_of_tablets ?? null,
-    noOfCaptains: row.no_of_captains ?? null,
     noOfManagers: row.no_of_managers ?? null,
     rate: row.just_tap_rate != null ? Number(row.just_tap_rate) : null,
   },
@@ -86,8 +85,7 @@ const mapTabFourFields = (data) => {
 
   return {
     no_of_tablets: justTap.noOfTablets,
-    no_of_captains: justTap.noOfCaptains,
-    no_of_managers: justTap.noOfManagers,
+    no_of_managers: justTap.noOfManagers ?? justTap.noOfCaptains,
     tablet_service: data.tabletService ?? data.tablet_service,
     media_client_address: data.mediaClientAddress ?? data.media_client_address,
     just_tap_rate: justTap.rate,
@@ -273,12 +271,12 @@ const eventRepository = {
         inquiry_id, client_id, client_name, client_mobile, caterer_name, client_address, reference, is_high_priority,
         venue_name, city_name, inquiry_date,
         start_date, end_date, event_function_name, status, package_id, assigned_manager_id,
-        is_live, no_of_tablets, no_of_captains, no_of_managers, tablet_service, media_client_address, just_tap_rate,
+        is_live, no_of_tablets, no_of_managers, tablet_service, media_client_address, just_tap_rate,
         has_photography_videography, photography_name, photography_number, photography_city,
         photography_description, photography_rate, client_instagram_id, no_of_followers,
         no_of_food_reels, no_of_testimonial_reels, bride_name, bride_instagram_id,
         groom_name, groom_instagram_id, food_notes, event_remarks, total_rate, discount_rate, final_rate, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.inquiry_id || null,
         data.client_id || null,
@@ -299,7 +297,6 @@ const eventRepository = {
         data.assigned_manager_id || null,
         data.is_live ? 1 : 0,
         tabFour.no_of_tablets ?? null,
-        tabFour.no_of_captains ?? null,
         tabFour.no_of_managers ?? null,
         tabFour.tablet_service ?? null,
         tabFour.media_client_address ?? null,
@@ -337,7 +334,7 @@ const eventRepository = {
       'venue_name', 'city_name', 'inquiry_date',
       'start_date', 'end_date', 'event_function_name', 'status', 'package_id',
       'assigned_manager_id', 'is_live', 'inquiry_id',
-      'no_of_tablets', 'no_of_captains', 'no_of_managers', 'tablet_service', 'media_client_address', 'just_tap_rate',
+      'no_of_tablets', 'no_of_managers', 'tablet_service', 'media_client_address', 'just_tap_rate',
       'has_photography_videography', 'photography_name', 'photography_number', 'photography_city',
       'photography_description', 'photography_rate', 'client_instagram_id', 'no_of_followers',
       'no_of_food_reels', 'no_of_testimonial_reels', 'bride_name', 'bride_instagram_id',
@@ -505,37 +502,6 @@ const eventRepository = {
     for (const staffId of staffIds) {
       await pool.execute(
         `INSERT INTO event_manager_allocations (event_id, staff_id) VALUES (?, ?)
-         ON DUPLICATE KEY UPDATE deleted_at = NULL, updated_at = NOW()`,
-        [eventId, staffId]
-      );
-    }
-  },
-
-  async getCaptainAllocations(eventId) {
-    const [rows] = await pool.execute(
-      `SELECT s.id, s.name
-       FROM event_captain_allocations eca
-       JOIN staff s ON s.id = eca.staff_id
-       WHERE eca.event_id = ?
-         AND eca.deleted_at IS NULL
-         AND s.deleted_at IS NULL
-       ORDER BY eca.id`,
-      [eventId]
-    );
-    return rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-    }));
-  },
-
-  async setCaptainAllocations(eventId, staffIds) {
-    await pool.execute(
-      'UPDATE event_captain_allocations SET deleted_at = NOW() WHERE event_id = ? AND deleted_at IS NULL',
-      [eventId]
-    );
-    for (const staffId of staffIds) {
-      await pool.execute(
-        `INSERT INTO event_captain_allocations (event_id, staff_id) VALUES (?, ?)
          ON DUPLICATE KEY UPDATE deleted_at = NULL, updated_at = NOW()`,
         [eventId, staffId]
       );
