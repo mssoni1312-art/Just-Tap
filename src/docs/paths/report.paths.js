@@ -57,6 +57,29 @@ const reportPaths = {
       responseSchema: 'ReportPhotoUploadResponse',
     }),
   },
+  '/report/upload-client-logo': {
+    post: op('post', ['Report Builder'], 'Upload client logo', {
+      operationId: 'reportUploadClientLogo',
+      description: 'Upload a client/caterer logo image for the report. Stored on the report and used in PDF generation.',
+      requestBody: {
+        required: true,
+        content: {
+          'multipart/form-data': {
+            schema: {
+              type: 'object',
+              required: ['file', 'reportId'],
+              properties: {
+                file: { type: 'string', format: 'binary' },
+                reportId: { $ref: '#/components/schemas/IdParam' },
+              },
+            },
+          },
+        },
+      },
+      created: true,
+      responseSchema: 'ReportClientLogoUploadResponse',
+    }),
+  },
   '/report/photo/{photoId}': {
     delete: op('delete', ['Report Builder'], 'Delete report photo', {
       operationId: 'reportDeletePhoto',
@@ -120,6 +143,14 @@ const reportPaths = {
     patch: op('patch', ['Report Builder'], 'Update photo filter', {
       operationId: 'reportUpdatePhotoFilter',
       requestBody: jsonBody('UpdateReportPhotoFilterRequest'),
+      responseSchema: 'ReportDetail',
+    }),
+  },
+  '/report/client-details': {
+    patch: op('patch', ['Report Builder'], 'Update client details', {
+      operationId: 'reportUpdateClientDetails',
+      description: 'Update client/couple and event display fields on the linked event for a report (client name, bride/groom names, date, venue, city).',
+      requestBody: jsonBody('UpdateReportClientDetailsRequest'),
       responseSchema: 'ReportDetail',
     }),
   },

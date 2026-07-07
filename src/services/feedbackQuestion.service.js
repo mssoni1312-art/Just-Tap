@@ -257,6 +257,69 @@ const feedbackQuestionService = {
     if (!event) throw new AppError('Event not found', 404);
     return feedbackQuestionRepository.findSubmissionsByEvent(eventId, query);
   },
+
+  async listByEvent(eventIdOrUuid, query = {}) {
+    const eventId = await resolveId('events', eventIdOrUuid);
+    const event = await eventRepository.findById(eventId);
+    if (!event) throw new AppError('Event not found', 404);
+    return feedbackQuestionRepository.findAll({ ...query, eventId });
+  },
+
+  async createForEvent(eventIdOrUuid, data, userId) {
+    const eventId = await resolveId('events', eventIdOrUuid);
+    const event = await eventRepository.findById(eventId);
+    if (!event) throw new AppError('Event not found', 404);
+
+    const questionText = (data.questionText || data.question || '').trim();
+    if (!questionText) throw new AppError('Question text is required', 400);
+
+    let questionType = data.questionType || 'rating';
+    let options = data.options;
+
+    if (data.audience && !options) {
+      options = { audience: data.audience === 'client_service' ? 'client_service' : 'guest_catering' };
+      if (!data.questionType) questionType = 'text';
+    }
+
+    let sortOrder = data.sortOrder;
+    if (sortOrder === undefined) {
+      const existing = await feedbackQuestionRepository.findAll({
+        eventId,
+        limit: 200,
+        page: 1,
+        sortBy: 'sort_order',
+        sortOrder: 'asc',
+      });
+      sortOrder = existing.items.length;
+    }
+
+    const payload = {
+      questionText,
+      questionType,
+      options,
+      isRequired: data.isRequired !== false,
+      sortOrder,
+      isActive: data.isActive !== false,
+      eventId: eventIdOrUuid,
+    };
+
+    validateQuestionPayload(payload);
+    return this.create(payload, userId);
+  },
+
+  async removeForEvent(eventIdOrUuid, questionIdOrUuid, userId) {
+    const eventId = await resolveId('events', eventIdOrUuid);
+    const event = await eventRepository.findById(eventId);
+    if (!event) throw new AppError('Event not found', 404);
+
+    const questionId = await resolveId('feedback_questions', questionIdOrUuid);
+    const row = await feedbackQuestionRepository.findById(questionId);
+    if (!row || Number(row.event_id) !== Number(eventId)) {
+      throw new AppError('Feedback question not found', 404);
+    }
+
+    return this.remove(questionId, userId);
+  },
 };
 
 module.exports = feedbackQuestionService;

@@ -14,7 +14,9 @@ const {
   updateTypographySchema,
   updateGridSchema,
   updatePhotoFilterSchema,
+  updateClientDetailsSchema,
   uploadPhotoSchema,
+  uploadClientLogoSchema,
   uploadTemplateSchema,
   saveDraftSchema,
   publishReportSchema,
@@ -38,6 +40,12 @@ router.post(
   validate(uploadPhotoSchema),
   asyncHandler(domain.report.uploadPhoto)
 );
+router.post(
+  '/upload-client-logo',
+  uploadImage.single('file'),
+  validate(uploadClientLogoSchema),
+  asyncHandler(domain.report.uploadClientLogo)
+);
 router.delete('/photo/:photoId', validate(photoIdParamSchema, 'params'), asyncHandler(domain.report.deletePhoto));
 router.post('/template/select', validate(selectTemplateSchema), asyncHandler(domain.report.selectTemplate));
 router.post(
@@ -50,6 +58,7 @@ router.patch('/theme', validate(updateThemeSchema), asyncHandler(domain.report.u
 router.patch('/typography', validate(updateTypographySchema), asyncHandler(domain.report.updateTypography));
 router.patch('/grid', validate(updateGridSchema), asyncHandler(domain.report.updateGrid));
 router.patch('/photo-filter', validate(updatePhotoFilterSchema), asyncHandler(domain.report.updatePhotoFilter));
+router.patch('/client-details', validate(updateClientDetailsSchema), asyncHandler(domain.report.updateClientDetails));
 router.post('/save-draft', validate(saveDraftSchema), asyncHandler(domain.report.saveDraft));
 router.post('/publish', validate(publishReportSchema), asyncHandler(domain.report.publish));
 router.post('/share', validate(shareReportSchema), asyncHandler(domain.report.share));

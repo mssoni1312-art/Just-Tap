@@ -25,6 +25,14 @@ async function start() {
     logger.info(`Liveness: http://localhost:${PORT}/health/live`);
   });
 
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      logger.error(`Port ${PORT} is already in use. Stop the other server first: lsof -ti :${PORT} | xargs kill -9`);
+      process.exit(1);
+    }
+    throw err;
+  });
+
   const shutdown = async (signal) => {
     logger.info(`${signal} received — shutting down gracefully`);
     server.close(async () => {

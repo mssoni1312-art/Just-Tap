@@ -74,4 +74,27 @@ const uploadImport = multer({
   },
 });
 
-module.exports = { uploadImage, uploadDocument, uploadImport, maxSizeMb };
+const allTaskAttachmentMaxSizeMb = 20;
+const allTaskAttachmentFilter = (_req, file, cb) => {
+  const allowed = ['application/pdf', 'image/jpeg', 'image/png'];
+  if (allowed.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only PDF, JPG, and PNG files are allowed'), false);
+  }
+};
+
+const uploadAllTaskAttachment = multer({
+  storage: documentStorage,
+  limits: { fileSize: allTaskAttachmentMaxSizeMb * 1024 * 1024 },
+  fileFilter: allTaskAttachmentFilter,
+});
+
+module.exports = {
+  uploadImage,
+  uploadDocument,
+  uploadImport,
+  uploadAllTaskAttachment,
+  maxSizeMb,
+  allTaskAttachmentMaxSizeMb,
+};

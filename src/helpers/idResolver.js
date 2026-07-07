@@ -20,23 +20,31 @@ async function resolveId(table, idOrUuid, { softDelete = true } = {}) {
 
   const deletedClause = softDelete ? 'AND deleted_at IS NULL' : '';
 
-  if (isNumericId(idOrUuid)) {
-    const id = Number(idOrUuid);
-    const [rows] = await pool.execute(
-      `SELECT id FROM ${table} WHERE id = ? ${deletedClause}`,
-      [id]
-    );
-    if (!rows[0]) throw new AppError('Resource not found', 404);
-    return rows[0].id;
-  }
+  try {
+    if (isNumericId(idOrUuid)) {
+      const id = Number(idOrUuid);
+      const [rows] = await pool.execute(
+        `SELECT id FROM ${table} WHERE id = ? ${deletedClause}`,
+        [id]
+      );
+      if (!rows[0]) throw new AppError('Resource not found', 404);
+      return rows[0].id;
+    }
 
-  if (isUuid(idOrUuid)) {
-    const [rows] = await pool.execute(
-      `SELECT id FROM ${table} WHERE uuid = ? ${deletedClause}`,
-      [idOrUuid]
-    );
-    if (!rows[0]) throw new AppError('Resource not found', 404);
-    return rows[0].id;
+    if (isUuid(idOrUuid)) {
+      const [rows] = await pool.execute(
+        `SELECT id FROM ${table} WHERE uuid = ? ${deletedClause}`,
+        [idOrUuid]
+      );
+      if (!rows[0]) throw new AppError('Resource not found', 404);
+      return rows[0].id;
+    }
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    if (err.code === 'ECONNREFUSED' || err.name === 'AggregateError') {
+      throw new AppError('Database unavailable', 503);
+    }
+    throw err;
   }
 
   throw new AppError('Invalid id format', 400);

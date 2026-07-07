@@ -14,6 +14,20 @@ module.exports = {
     sendSuccess(res, await feedbackQuestionService.bulkDelete(req.body.ids, req.user.id)),
   reorder: async (req, res) =>
     sendSuccess(res, await feedbackQuestionService.reorder(req.body.items, req.user.id)),
+  listByEvent: async (req, res) =>
+    sendSuccess(res, await feedbackQuestionService.listByEvent(req.params.eventId, req.query)),
+  createForEvent: async (req, res) =>
+    sendSuccess(
+      res,
+      await feedbackQuestionService.createForEvent(req.params.eventId, req.body, req.user.id),
+      'Question created',
+      201
+    ),
+  removeForEvent: async (req, res) =>
+    sendSuccess(
+      res,
+      await feedbackQuestionService.removeForEvent(req.params.eventId, req.params.questionId, req.user.id)
+    ),
   listSubmissions: async (req, res) =>
     sendSuccess(res, await feedbackQuestionService.listSubmissions(req.params.eventId, req.query)),
   getActiveForEvent: async (req, res) =>

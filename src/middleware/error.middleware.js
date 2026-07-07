@@ -26,6 +26,14 @@ const errorHandler = (err, req, res, _next) => {
     return sendError(res, 'Invalid date or time value in request', [err.message], 400);
   }
 
+  if (err.code === 'ER_CHECK_CONSTRAINT_VIOLATED' || err.errno === 3819) {
+    return sendError(res, 'Invalid date range: end date must be on or after start date', [err.message], 400);
+  }
+
+  if (err.code === 'ECONNREFUSED' || err.name === 'AggregateError') {
+    return sendError(res, 'Database unavailable', [], 503);
+  }
+
   if (err.code === 'ER_NO_REFERENCED_ROW_2') {
     return sendError(res, 'Invalid reference in request', [err.message], 400);
   }

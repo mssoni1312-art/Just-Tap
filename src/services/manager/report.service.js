@@ -39,6 +39,11 @@ const managerReportService = {
     return reportService.uploadPhoto(reportId, file, userId, body);
   },
 
+  uploadClientLogo: async (staffId, reportId, file, userId) => {
+    await assertManagerOwnsReportEvent(staffId, reportId);
+    return reportService.uploadClientLogo(reportId, file, userId);
+  },
+
   uploadTemplate: (file, userId, body) => reportService.uploadTemplate(file, userId, body),
 
   deletePhoto: async (staffId, photoId, userId) => {
@@ -77,6 +82,16 @@ const managerReportService = {
   updatePhotoFilter: async (staffId, reportId, data, userId) => {
     await assertManagerOwnsReportEvent(staffId, reportId);
     return reportService.updatePhotoFilter(reportId, data, userId);
+  },
+
+  updateClientDetails: async (staffId, data, userId) => {
+    if (data.reportId) {
+      await assertManagerOwnsReportEvent(staffId, data.reportId);
+    } else {
+      const eventId = await resolveId('events', data.eventId);
+      await assertManagerOwnsEvent(staffId, eventId);
+    }
+    return reportService.updateClientDetails(data, userId);
   },
 
   saveDraft: async (staffId, reportId, data, userId) => {

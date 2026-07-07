@@ -290,6 +290,14 @@ const components = {
         amountCollected: { type: 'number', minimum: 0, example: 22000 },
       },
     },
+    CompleteManagerAllTasksRequest: {
+      type: 'object',
+      description:
+        'Optional body for Submit. Send amountCollected here to save and complete in one call, or save it earlier via PATCH /all-tasks.',
+      properties: {
+        amountCollected: { type: 'number', minimum: 0, example: 32300 },
+      },
+    },
     ManagerAllTaskAttachment: {
       type: 'object',
       properties: {
@@ -448,6 +456,50 @@ const components = {
           properties: { status: { $ref: '#/components/schemas/EventStatus' } },
         },
       ],
+    },
+    EventListItem: {
+      type: 'object',
+      description: 'Event summary returned in list, today, and upcoming responses.',
+      properties: {
+        id: { type: 'string' },
+        uuid: { type: 'string', format: 'uuid' },
+        clientName: { type: 'string' },
+        venueName: { type: 'string' },
+        startDate: { type: 'string', format: 'date' },
+        endDate: { type: 'string', format: 'date' },
+        status: { $ref: '#/components/schemas/EventStatus' },
+        managerName: {
+          type: 'string',
+          nullable: true,
+          description: 'Comma-separated names of all assigned managers',
+        },
+        managerNames: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Names of all assigned managers',
+        },
+        assignedManagerIds: {
+          type: 'array',
+          items: { type: 'integer' },
+          description: 'Staff IDs of all assigned managers',
+        },
+        assignedManagerId: {
+          type: 'integer',
+          nullable: true,
+          description: 'Primary manager (first in assignedManagerIds)',
+        },
+      },
+    },
+    EventListResponse: {
+      type: 'object',
+      properties: {
+        items: { type: 'array', items: { $ref: '#/components/schemas/EventListItem' } },
+        pagination: { $ref: '#/components/schemas/PaginationMeta' },
+      },
+    },
+    EventListItemsArray: {
+      type: 'array',
+      items: { $ref: '#/components/schemas/EventListItem' },
     },
     EventDetail: {
       allOf: [
@@ -1114,6 +1166,19 @@ const components = {
         eventId: { type: 'string', nullable: true, description: 'Omit or null for global questions' },
       },
     },
+    CreateEventFeedbackQuestionRequest: {
+      type: 'object',
+      properties: {
+        questionText: { type: 'string', example: 'How was Food?' },
+        question: { type: 'string', example: 'Service Speed', description: 'Alias for questionText' },
+        questionType: { type: 'string', enum: ['rating', 'text', 'single_choice', 'multiple_choice', 'yes_no'], default: 'rating' },
+        options: { type: 'array', items: { type: 'string' }, example: ['Yes', 'No'] },
+        isRequired: { type: 'boolean', default: true },
+        sortOrder: { type: 'integer' },
+        isActive: { type: 'boolean', default: true },
+        audience: { type: 'string', enum: ['guest_catering', 'client_service'], description: 'Optional audience tag for guest/client feedback flows' },
+      },
+    },
     UpdateFeedbackQuestionRequest: {
       type: 'object',
       properties: {
@@ -1230,9 +1295,9 @@ const components = {
     },
     BillingFunctionCharge: {
       type: 'object',
-      required: ['label', 'amount'],
       properties: {
-        label: { type: 'string', example: 'Decoration' },
+        label: { type: 'string', example: 'Decoration', description: 'Charge label (alias: description)' },
+        description: { type: 'string', example: 'Decoration', description: 'Alias for label' },
         amount: { type: 'number', example: 5000 },
       },
     },
@@ -1242,10 +1307,12 @@ const components = {
       properties: {
         eventFunctionId: { $ref: '#/components/schemas/IdParam', nullable: true },
         name: { type: 'string', example: 'Dinner' },
+        description: { type: 'string', example: 'Main reception dinner', description: 'Function-level description' },
         date: { type: 'string', format: 'date', example: '2025-06-12' },
         startTime: { type: 'string', example: '08:00 PM' },
         pax: { type: 'integer', example: 850 },
-        extraCharges: { type: 'number', example: 0 },
+        extraCharges: { type: 'number', example: 0, description: 'Extra amount for this function' },
+        extraAmount: { type: 'number', example: 0, description: 'Alias for extraCharges' },
         ratePerPlate: { type: 'number', example: 1250 },
         amount: { type: 'number', example: 1062500 },
         charges: { type: 'array', items: { $ref: '#/components/schemas/BillingFunctionCharge' } },
@@ -1268,7 +1335,7 @@ const components = {
       properties: {
         amount: { type: 'number', example: 500000 },
         paidAt: { type: 'string', format: 'date-time', nullable: true },
-        description: { type: 'string', example: 'Bank Transfer' },
+        description: { type: 'string', example: 'Bank Transfer', description: 'Payment method or note' },
       },
     },
     SaveBillingPreviewRequest: {
@@ -1277,7 +1344,16 @@ const components = {
         showToClient: { type: 'boolean', default: false, description: 'When true, billing is visible in the client app' },
         functions: { type: 'array', items: { $ref: '#/components/schemas/BillingFunction' } },
         estimate: { $ref: '#/components/schemas/BillingEstimate' },
-        payments: { type: 'array', items: { $ref: '#/components/schemas/BillingPayment' } },
+        payments: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/BillingPayment' },
+          description: 'Advance payment entries (alias: advancePayments)',
+        },
+        advancePayments: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/BillingPayment' },
+          description: 'Advance payment list (alias for payments)',
+        },
         notes: { type: 'string', example: 'Add notes here...' },
       },
     },
@@ -1292,6 +1368,11 @@ const components = {
         functions: { type: 'array', items: { $ref: '#/components/schemas/BillingFunction' } },
         estimate: { $ref: '#/components/schemas/BillingEstimate' },
         payments: { type: 'array', items: { $ref: '#/components/schemas/BillingPayment' } },
+        advancePayments: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/BillingPayment' },
+          description: 'Advance payment list (same as payments)',
+        },
         totalPaid: { type: 'number' },
         remainingPayment: { type: 'number' },
         notes: { type: 'string' },
@@ -1309,6 +1390,11 @@ const components = {
         functions: { type: 'array', items: { $ref: '#/components/schemas/BillingFunction' } },
         estimate: { $ref: '#/components/schemas/BillingEstimate' },
         payments: { type: 'array', items: { $ref: '#/components/schemas/BillingPayment' } },
+        advancePayments: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/BillingPayment' },
+          description: 'Advance payment list (same as payments)',
+        },
         totalPaid: { type: 'number' },
         remainingPayment: { type: 'number' },
         notes: { type: 'string' },
@@ -1509,6 +1595,25 @@ const components = {
         intensity: { type: 'number', minimum: 0, maximum: 100, example: 80 },
       },
     },
+    UpdateReportClientDetailsRequest: {
+      type: 'object',
+      properties: {
+        reportId: { $ref: '#/components/schemas/IdParam', description: 'Report ID (numeric or UUID). Provide reportId or eventId.' },
+        eventId: { $ref: '#/components/schemas/IdParam', description: 'Event ID (numeric or UUID). Provide reportId or eventId.' },
+        clientName: { type: 'string', example: 'Rajesh Kumar' },
+        clientMobile: { type: 'string', nullable: true, example: '9876543210' },
+        brideName: { type: 'string', nullable: true, example: 'Priya' },
+        groomName: { type: 'string', nullable: true, example: 'Amit' },
+        eventStartDate: { type: 'string', format: 'date', example: '2026-12-15' },
+        functionName: { type: 'string', nullable: true, example: 'Wedding Reception' },
+        venueName: { type: 'string', example: 'Grand Ballroom' },
+        cityName: { type: 'string', example: 'Mumbai' },
+      },
+      oneOf: [
+        { required: ['reportId'] },
+        { required: ['eventId'] },
+      ],
+    },
     SaveReportDraftRequest: {
       type: 'object',
       required: ['reportId'],
@@ -1581,6 +1686,7 @@ const components = {
         includeMenuInTemplate: { type: 'boolean' },
         layoutPosition: { type: 'string', enum: ['top', 'background', 'side'], nullable: true },
         brideGroomPhotoUrl: { type: 'string', format: 'uri', nullable: true },
+        clientLogoUrl: { type: 'string', format: 'uri', nullable: true },
         typography: { type: 'object' },
         grid: { type: 'object' },
         photoFilter: { type: 'object' },
@@ -1599,6 +1705,16 @@ const components = {
         originalName: { type: 'string' },
         reportId: { type: 'string' },
         setAsBrideGroomPhoto: { type: 'boolean' },
+      },
+    },
+    ReportClientLogoUploadResponse: {
+      type: 'object',
+      properties: {
+        id: { type: 'integer' },
+        url: { type: 'string', format: 'uri' },
+        originalName: { type: 'string' },
+        reportId: { type: 'string' },
+        clientLogoUrl: { type: 'string', format: 'uri' },
       },
     },
     ReportPhotoDeleteResponse: {

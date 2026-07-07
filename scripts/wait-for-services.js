@@ -46,7 +46,8 @@ const waitForPort = (host, port, label) => new Promise((resolve, reject) => {
 });
 
 async function main() {
-  const dbHost = process.env.DB_HOST || 'localhost';
+  const rawHost = process.env.DB_HOST || '127.0.0.1';
+  const dbHost = rawHost === 'localhost' ? '127.0.0.1' : rawHost;
   const dbPort = Number(process.env.DB_PORT) || 3306;
   const redis = parseRedisHost(process.env.REDIS_URL || 'redis://localhost:6379');
 

@@ -30,10 +30,16 @@ const eventsPaths = {
     }),
   },
   '/events/today': {
-    get: op('get', ['Events'], "Today's events", { operationId: 'eventsToday' }),
+    get: op('get', ['Events'], "Today's events (includes assigned manager names)", {
+      operationId: 'eventsToday',
+      responseSchema: 'EventListItemsArray',
+    }),
   },
   '/events/upcoming': {
-    get: op('get', ['Events'], 'Upcoming events', { operationId: 'eventsUpcoming' }),
+    get: op('get', ['Events'], 'Upcoming events (includes assigned manager names)', {
+      operationId: 'eventsUpcoming',
+      responseSchema: 'EventListItemsArray',
+    }),
   },
   '/events/export': {
     get: op('get', ['Events'], 'Export events', {
@@ -51,10 +57,10 @@ const eventsPaths = {
     }),
   },
   '/events': {
-    get: op('get', ['Events'], 'List events', {
+    get: op('get', ['Events'], 'List events (includes assigned manager names)', {
       operationId: 'eventsList',
       parameters: eventListParams,
-      responseSchema: 'PaginatedList',
+      responseSchema: 'EventListResponse',
     }),
     post: op('post', ['Events'], 'Create event', {
       operationId: 'eventsCreate',
@@ -272,6 +278,37 @@ const eventsPaths = {
       parameters: [eventIdParam, ...exportParams().slice(2)],
     }),
   },
+  '/events/{eventId}/feedback/questions': {
+    get: op('get', ['Events', 'Feedback Questionnaire'], 'List feedback questions for event', {
+      operationId: 'eventFeedbackQuestionsList',
+      description: 'List admin-configured feedback questions scoped to an event.',
+      parameters: [
+        eventIdParam,
+        ...paginationParams([
+          { name: 'isActive', in: 'query', schema: { type: 'boolean' } },
+          { name: 'search', in: 'query', schema: { type: 'string' } },
+        ]),
+      ],
+      responseSchema: 'PaginatedList',
+    }),
+    post: op('post', ['Events', 'Feedback Questionnaire'], 'Create feedback question for event', {
+      operationId: 'eventFeedbackQuestionsCreate',
+      description: 'Create a feedback question for an event. Accepts `questionText` or `question` (alias). Defaults to rating type.',
+      parameters: [eventIdParam],
+      requestBody: jsonBody('CreateEventFeedbackQuestionRequest'),
+      responseSchema: 'FeedbackQuestion',
+      successDescription: 'Question created',
+    }),
+  },
+  '/events/{eventId}/feedback/questions/{questionId}': {
+    delete: op('delete', ['Events', 'Feedback Questionnaire'], 'Delete event feedback question', {
+      operationId: 'eventFeedbackQuestionsDelete',
+      parameters: [
+        eventIdParam,
+        { name: 'questionId', in: 'path', required: true, schema: { $ref: '#/components/schemas/IdParam' }, description: 'Question ID or UUID' },
+      ],
+    }),
+  },
   '/events/{eventId}/feedback-questionnaire/submissions': {
     get: op('get', ['Events', 'Feedback Questionnaire'], 'List questionnaire submissions for event', {
       operationId: 'eventFeedbackQuestionnaireSubmissions',
@@ -302,14 +339,15 @@ const eventsPaths = {
         showToClient: true,
         functions: [
           {
-            name: 'Dinner',
-            date: '2025-06-12',
-            startTime: '08:00 PM',
-            pax: 850,
-            extraCharges: 0,
-            ratePerPlate: 0,
-            amount: 0,
-            charges: [],
+            name: 'Sangeet',
+            description: 'Evening sangeet function',
+            date: '2026-07-06',
+            startTime: '08:00 AM',
+            pax: 0,
+            extraAmount: 500,
+            ratePerPlate: 500,
+            amount: 500,
+            charges: [{ description: 'Stage setup', amount: 0 }],
           },
         ],
         estimate: {
@@ -319,10 +357,10 @@ const eventsPaths = {
           sgstAmount: 0,
           discount: 0,
           roundOff: 0,
-          grandTotal: 1074410,
+          grandTotal: 500,
         },
-        payments: [{ amount: 0, paidAt: null, description: 'Bank Transfer' }],
-        notes: '',
+        advancePayments: [{ amount: 5000, paidAt: '2026-07-06T18:30:00.000Z', description: 'Bank Transfer' }],
+        notes: 'Add notes here...',
       }),
       responseSchema: 'EventBilling',
       successDescription: 'Billing saved; visible in client app when showToClient is true',

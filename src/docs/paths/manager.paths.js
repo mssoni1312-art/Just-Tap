@@ -89,13 +89,14 @@ const managerDashboardPaths = {
 
 const managerEventPaths = {
   '/events': {
-    get: op('get', [MANAGER_TAG, 'Manager Events'], 'List manager events', {
+    get: op('get', [MANAGER_TAG, 'Manager Events'], 'List manager events (includes assigned manager names)', {
       operationId: 'managerEventsList',
       parameters: paginationParams([
         { name: 'status', in: 'query', schema: { type: 'string' } },
         { name: 'startDate', in: 'query', schema: { type: 'string', format: 'date' } },
         { name: 'endDate', in: 'query', schema: { type: 'string', format: 'date' } },
       ]),
+      responseSchema: 'EventListResponse',
     }),
     post: op('post', [MANAGER_TAG, 'Manager Events'], 'Create event (auto-assigns manager)', {
       operationId: 'managerEventsCreate',
@@ -216,9 +217,12 @@ const managerEventPaths = {
     }),
   },
   '/events/{eventId}/all-tasks/complete': {
-    post: op('post', [MANAGER_TAG, 'Manager Tasks'], 'Mark All Tasks as completed', {
+    post: op('post', [MANAGER_TAG, 'Manager Tasks'], 'Submit and complete All Tasks', {
       operationId: 'managerEventAllTasksComplete',
+      description:
+        'Marks the All Tasks workflow as completed. Requires **amount collected** (saved via PATCH or sent in body) and **at least one attachment** (receipt/payment screenshot).',
       parameters: [eventIdParam],
+      requestBody: jsonBody('CompleteManagerAllTasksRequest', false),
       responseSchema: 'ManagerAllTasksResponse',
     }),
   },

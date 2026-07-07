@@ -249,6 +249,9 @@ describe('Manager API integration', { skip: process.env.SKIP_INTEGRATION_TESTS =
     assert.equal(listAfterAssign.status, 200);
     assert.equal(listAfterAssign.body.data.items.length, 1);
     assert.equal(listAfterAssign.body.data.items[0].uuid, createdUuid);
+    assert.ok(Array.isArray(listAfterAssign.body.data.items[0].managerNames));
+    assert.ok(listAfterAssign.body.data.items[0].managerNames.length >= 1);
+    assert.ok(listAfterAssign.body.data.items[0].managerName);
   });
 
   it('GET /api/manager/events/:id denies access to another manager event', async (t) => {
@@ -399,6 +402,104 @@ describe('Manager API integration', { skip: process.env.SKIP_INTEGRATION_TESTS =
     assert.equal(res.status, 200);
     const followersTask = res.body.data.tasks.find((task) => task.key === 'gain_followers');
     assert.equal(followersTask.achievedCount, 22);
+  });
+
+  it('POST /api/manager/events/:eventId/all-tasks/complete requires amount and attachment', async (t) => {
+    if (!dbReady) return t.skip();
+
+    const eventsRes = await request(app)
+      .get('/api/manager/events')
+      .set('Authorization', `Bearer ${managerToken}`);
+
+    const eventUuid = eventsRes.body.data.items?.[0]?.uuid;
+    if (!eventUuid) return t.skip();
+
+    const [[eventRow]] = await pool.execute(
+      'SELECT id FROM events WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+      [eventUuid]
+    );
+    if (!eventRow) return t.skip();
+
+    await pool.execute(
+      `UPDATE event_all_tasks
+       SET status = 'in_progress', amount_collected = 0, completed_at = NULL, abandoned_at = NULL
+       WHERE event_id = ?`,
+      [eventRow.id]
+    );
+    await pool.execute(
+      'UPDATE event_all_task_attachments SET deleted_at = NOW() WHERE event_id = ? AND deleted_at IS NULL',
+      [eventRow.id]
+    );
+
+    const missingAmountRes = await request(app)
+      .post(`/api/manager/events/${eventUuid}/all-tasks/complete`)
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({});
+
+    assert.equal(missingAmountRes.status, 400);
+    assert.match(missingAmountRes.body.message, /amount collected/i);
+
+    await request(app)
+      .patch(`/api/manager/events/${eventUuid}/all-tasks`)
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({ amountCollected: 15000 });
+
+    const missingAttachmentRes = await request(app)
+      .post(`/api/manager/events/${eventUuid}/all-tasks/complete`)
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({});
+
+    assert.equal(missingAttachmentRes.status, 400);
+    assert.match(missingAttachmentRes.body.message, /receipt|screenshot|attachment/i);
+  });
+
+  it('POST /api/manager/events/:eventId/all-tasks/complete submits billing with attachment', async (t) => {
+    if (!dbReady) return t.skip();
+
+    const eventsRes = await request(app)
+      .get('/api/manager/events')
+      .set('Authorization', `Bearer ${managerToken}`);
+
+    const eventUuid = eventsRes.body.data.items?.[0]?.uuid;
+    if (!eventUuid) return t.skip();
+
+    const [[eventRow]] = await pool.execute(
+      'SELECT id FROM events WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+      [eventUuid]
+    );
+    if (!eventRow) return t.skip();
+
+    await pool.execute(
+      `UPDATE event_all_tasks
+       SET status = 'in_progress', amount_collected = 0, completed_at = NULL, abandoned_at = NULL
+       WHERE event_id = ?`,
+      [eventRow.id]
+    );
+    await pool.execute(
+      'UPDATE event_all_task_attachments SET deleted_at = NOW() WHERE event_id = ? AND deleted_at IS NULL',
+      [eventRow.id]
+    );
+
+    const uploadRes = await request(app)
+      .post(`/api/manager/events/${eventUuid}/all-tasks/attachments`)
+      .set('Authorization', `Bearer ${managerToken}`)
+      .attach('file', Buffer.from('fake-receipt-image'), {
+        filename: 'receipt.png',
+        contentType: 'image/png',
+      });
+
+    assert.equal(uploadRes.status, 201);
+
+    const completeRes = await request(app)
+      .post(`/api/manager/events/${eventUuid}/all-tasks/complete`)
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({ amountCollected: 32300 });
+
+    assert.equal(completeRes.status, 200);
+    assert.equal(completeRes.body.data.status, 'completed');
+    const billingTask = completeRes.body.data.tasks.find((task) => task.key === 'billing_tracking');
+    assert.equal(billingTask.amountCollected, 32300);
+    assert.ok(completeRes.body.data.attachments.length >= 1);
   });
 
   it('GET /api/manager/events/:eventId/orders/summary returns order stats', async (t) => {
@@ -610,5 +711,98 @@ describe('Manager API integration', { skip: process.env.SKIP_INTEGRATION_TESTS =
 
     assert.equal(res.status, 200);
     assert.ok('estimate' in res.body.data);
+  });
+
+  it('PUT /api/manager/events/:eventId/billing/save-preview saves description, extra amount, and advance payments', async (t) => {
+    if (!dbReady) return t.skip();
+
+    const eventsRes = await request(app)
+      .get('/api/manager/events')
+      .set('Authorization', `Bearer ${managerToken}`);
+
+    const eventUuid = eventsRes.body.data.items?.[0]?.uuid;
+    if (!eventUuid) return t.skip();
+
+    const payload = {
+      showToClient: false,
+      functions: [{
+        name: 'Sangeet',
+        description: 'Main sangeet function',
+        date: '2026-07-06',
+        startTime: '08:00 AM',
+        pax: 0,
+        extraAmount: 250,
+        ratePerPlate: 500,
+        amount: 500,
+        charges: [{ description: 'Stage setup', amount: 0 }],
+      }],
+      estimate: {
+        cgstPercent: 0,
+        cgstAmount: 0,
+        sgstPercent: 0,
+        sgstAmount: 0,
+        discount: 0,
+        roundOff: 0,
+        grandTotal: 750,
+      },
+      advancePayments: [{
+        amount: 5000,
+        paidAt: '2026-07-06T18:30:00.000Z',
+        description: 'Bank Transfer',
+      }],
+      notes: 'Billing notes',
+    };
+
+    const saveRes = await request(app)
+      .put(`/api/manager/events/${eventUuid}/billing/save-preview`)
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send(payload);
+
+    assert.equal(saveRes.status, 200);
+    assert.equal(saveRes.body.success, true);
+
+    const fn = saveRes.body.data.functions[0];
+    assert.equal(fn.description, 'Main sangeet function');
+    assert.equal(fn.extraAmount, 250);
+    assert.equal(fn.extraCharges, 250);
+    assert.equal(fn.charges[0].description, 'Stage setup');
+    assert.equal(fn.charges[0].label, 'Stage setup');
+
+    assert.equal(saveRes.body.data.advancePayments.length, 1);
+    assert.equal(saveRes.body.data.advancePayments[0].description, 'Bank Transfer');
+    assert.equal(saveRes.body.data.payments[0].amount, 5000);
+    assert.equal(saveRes.body.data.totalPaid, 5000);
+    assert.equal(saveRes.body.data.notes, 'Billing notes');
+  });
+
+  it('PUT billing/save-preview accepts charge description without label', async (t) => {
+    if (!dbReady) return t.skip();
+
+    const eventsRes = await request(app)
+      .get('/api/manager/events')
+      .set('Authorization', `Bearer ${managerToken}`);
+
+    const eventUuid = eventsRes.body.data.items?.[0]?.uuid;
+    if (!eventUuid) return t.skip();
+
+    const saveRes = await request(app)
+      .put(`/api/manager/events/${eventUuid}/billing/save-preview`)
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({
+        functions: [{
+          name: 'Sangeet',
+          description: 32332,
+          extraAmount: 0,
+          ratePerPlate: 500,
+          amount: 500,
+          charges: [{ description: 32332, amount: 0 }, { description: 'rerr', amount: 0 }],
+        }],
+        estimate: { grandTotal: 500 },
+        payments: [{ amount: 5000, description: 'reffer' }],
+      });
+
+    assert.equal(saveRes.status, 200, saveRes.body.errors?.join(', ') || saveRes.body.message);
+    assert.equal(saveRes.body.data.functions[0].charges[0].label, '32332');
+    assert.equal(saveRes.body.data.functions[0].charges[1].label, 'rerr');
   });
 });

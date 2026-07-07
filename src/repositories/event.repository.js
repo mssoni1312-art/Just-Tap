@@ -10,6 +10,42 @@ const toDateOnly = (value) => {
   return String(value).slice(0, 10);
 };
 
+const MANAGER_NAMES_SUBQUERY = `(SELECT GROUP_CONCAT(s2.name ORDER BY ema.id SEPARATOR ', ')
+  FROM event_manager_allocations ema
+  JOIN staff s2 ON s2.id = ema.staff_id AND s2.deleted_at IS NULL
+  WHERE ema.event_id = e.id AND ema.deleted_at IS NULL)`;
+
+const MANAGER_IDS_SUBQUERY = `(SELECT GROUP_CONCAT(ema.staff_id ORDER BY ema.id)
+  FROM event_manager_allocations ema
+  WHERE ema.event_id = e.id AND ema.deleted_at IS NULL)`;
+
+const EVENT_LIST_SELECT = `e.*, mp.name AS package_name, s.name AS manager_name,
+  ${MANAGER_NAMES_SUBQUERY} AS allocated_manager_names,
+  ${MANAGER_IDS_SUBQUERY} AS allocated_manager_ids`;
+
+const resolveManagerFields = (row) => {
+  const namesFromAlloc = row.allocated_manager_names
+    ? row.allocated_manager_names.split(', ').filter(Boolean)
+    : [];
+  const idsFromAlloc = row.allocated_manager_ids
+    ? row.allocated_manager_ids.split(',').map((id) => Number(id))
+    : [];
+
+  const managerNames = namesFromAlloc.length
+    ? namesFromAlloc
+    : (row.manager_name ? [row.manager_name] : []);
+  const assignedManagerIds = idsFromAlloc.length
+    ? idsFromAlloc
+    : (row.assigned_manager_id ? [row.assigned_manager_id] : []);
+
+  return {
+    assignedManagerId: assignedManagerIds[0] ?? row.assigned_manager_id ?? null,
+    assignedManagerIds,
+    managerNames,
+    managerName: managerNames.length ? managerNames.join(', ') : null,
+  };
+};
+
 const formatEvent = (row) => ({
   id: String(row.id),
   uuid: row.uuid,
@@ -32,8 +68,7 @@ const formatEvent = (row) => ({
   isLive: Boolean(row.is_live),
   packageId: row.package_id,
   packageName: row.package_name || null,
-  assignedManagerId: row.assigned_manager_id,
-  managerName: row.manager_name || null,
+  ...resolveManagerFields(row),
   justTapInformation: {
     noOfTablets: row.no_of_tablets ?? null,
     noOfManagers: row.no_of_managers ?? null,
@@ -170,7 +205,7 @@ const eventRepository = {
       params
     );
     const [rows] = await pool.execute(
-      `SELECT e.*, mp.name AS package_name, s.name AS manager_name
+      `SELECT ${EVENT_LIST_SELECT}
        FROM events e
        LEFT JOIN menu_packages mp ON mp.id = e.package_id
        LEFT JOIN staff s ON s.id = e.assigned_manager_id
@@ -187,7 +222,7 @@ const eventRepository = {
     const sortBy = sanitizeSortBy('events', query.sortBy || 'start_date');
     const sortOrder = (query.sortOrder || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
     const [rows] = await pool.execute(
-      `SELECT e.*, mp.name AS package_name, s.name AS manager_name
+      `SELECT ${EVENT_LIST_SELECT}
        FROM events e
        LEFT JOIN menu_packages mp ON mp.id = e.package_id
        LEFT JOIN staff s ON s.id = e.assigned_manager_id
@@ -222,7 +257,7 @@ const eventRepository = {
       params.push(...managerScopeParams(staffId));
     }
     const [rows] = await pool.execute(
-      `SELECT e.*, mp.name AS package_name, s.name AS manager_name
+      `SELECT ${EVENT_LIST_SELECT}
        FROM events e
        LEFT JOIN menu_packages mp ON mp.id = e.package_id
        LEFT JOIN staff s ON s.id = e.assigned_manager_id
@@ -241,7 +276,7 @@ const eventRepository = {
       params.push(...managerScopeParams(staffId));
     }
     const [rows] = await pool.execute(
-      `SELECT e.*, mp.name AS package_name, s.name AS manager_name
+      `SELECT ${EVENT_LIST_SELECT}
        FROM events e
        LEFT JOIN menu_packages mp ON mp.id = e.package_id
        LEFT JOIN staff s ON s.id = e.assigned_manager_id
@@ -254,7 +289,7 @@ const eventRepository = {
 
   async findById(id) {
     const [rows] = await pool.execute(
-      `SELECT e.*, mp.name AS package_name, s.name AS manager_name
+      `SELECT ${EVENT_LIST_SELECT}
        FROM events e
        LEFT JOIN menu_packages mp ON mp.id = e.package_id
        LEFT JOIN staff s ON s.id = e.assigned_manager_id
@@ -532,4 +567,9 @@ const eventRepository = {
   },
 };
 
-module.exports = eventRepository;
+module.exports = {
+  ...eventRepository,
+  EVENT_LIST_SELECT,
+  formatEvent,
+  resolveManagerFields,
+};

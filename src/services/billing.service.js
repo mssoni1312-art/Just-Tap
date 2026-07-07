@@ -22,15 +22,31 @@ async function resolveEventFunctionId(eventFunctionId) {
   return eventFunctionId;
 }
 
+function normalizeChargeLabel(charge = {}) {
+  if (charge.label != null && String(charge.label).trim() !== '') {
+    return String(charge.label);
+  }
+  if (charge.description != null && String(charge.description).trim() !== '') {
+    return String(charge.description);
+  }
+  return '';
+}
+
 async function normalizeBillingPayload(data) {
   const functions = await Promise.all((data.functions || []).map(async (fn) => ({
     ...fn,
+    description: fn.description != null ? String(fn.description) : '',
     eventFunctionId: await resolveEventFunctionId(fn.eventFunctionId),
     date: toMysqlDate(fn.date),
     startTime: toMysqlTime(fn.startTime),
+    extraCharges: fn.extraCharges ?? fn.extraAmount ?? 0,
+    charges: (fn.charges || []).map((charge) => ({
+      label: normalizeChargeLabel(charge),
+      amount: charge.amount ?? 0,
+    })),
   })));
 
-  const payments = (data.payments || []).map((payment) => ({
+  const payments = (data.advancePayments ?? data.payments ?? []).map((payment) => ({
     ...payment,
     paidAt: toMysqlDateTime(payment.paidAt),
   }));
@@ -77,6 +93,7 @@ const emptyBilling = (eventId) => ({
     grandTotal: 0,
   },
   payments: [],
+  advancePayments: [],
   totalPaid: 0,
   remainingPayment: 0,
   notes: '',
@@ -118,6 +135,7 @@ const billingService = {
       functions: billing.functions,
       estimate: billing.estimate,
       payments: billing.payments,
+      advancePayments: billing.advancePayments,
       totalPaid: billing.totalPaid,
       remainingPayment: billing.remainingPayment,
       notes: billing.notes,

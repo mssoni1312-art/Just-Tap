@@ -48,10 +48,38 @@ const updatePhotoFilterSchema = reportIdBody.keys({
   intensity: Joi.number().min(0).max(100),
 }).or('preset', 'intensity');
 
+const updateClientDetailsSchema = Joi.object({
+  reportId: idParam,
+  eventId: idParam,
+  clientName: Joi.string().trim().max(150),
+  clientMobile: Joi.string().trim().max(20).allow('', null),
+  brideName: Joi.string().trim().max(150).allow('', null),
+  groomName: Joi.string().trim().max(150).allow('', null),
+  eventStartDate: Joi.alternatives().try(Joi.date().iso(), Joi.string()),
+  functionName: Joi.string().trim().max(150).allow('', null),
+  venueName: Joi.string().trim().max(200),
+  cityName: Joi.string().trim().max(100),
+})
+  .xor('reportId', 'eventId')
+  .or(
+    'clientName',
+    'clientMobile',
+    'brideName',
+    'groomName',
+    'eventStartDate',
+    'functionName',
+    'venueName',
+    'cityName',
+  );
+
 const uploadPhotoSchema = Joi.object({
   reportId: idParam.required(),
   sortOrder: Joi.number().integer().min(0),
   setAsBrideGroomPhoto: Joi.boolean().truthy('true').falsy('false').default(false),
+});
+
+const uploadClientLogoSchema = Joi.object({
+  reportId: idParam.required(),
 });
 
 const uploadTemplateSchema = Joi.object({
@@ -95,7 +123,9 @@ module.exports = {
   updateTypographySchema,
   updateGridSchema,
   updatePhotoFilterSchema,
+  updateClientDetailsSchema,
   uploadPhotoSchema,
+  uploadClientLogoSchema,
   uploadTemplateSchema,
   saveDraftSchema,
   publishReportSchema,

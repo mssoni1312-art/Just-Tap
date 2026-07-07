@@ -47,7 +47,7 @@ module.exports = {
   completeAllTasks: async (req, res) =>
     sendSuccess(
       res,
-      await managerAllTaskService.complete(req.managerStaffId, req.params.eventId),
+      await managerAllTaskService.complete(req.managerStaffId, req.params.eventId, req.body),
       'All tasks marked as completed'
     ),
   abandonAllTasks: async (req, res) =>

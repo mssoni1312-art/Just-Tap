@@ -1,7 +1,7 @@
 const pool = require('../../config/database');
 const { parsePagination, buildPaginatedResponse, sanitizeSortBy } = require('../../helpers/pagination');
 const { MANAGER_EVENT_SCOPE_SQL, managerScopeParams } = require('../../helpers/managerScope');
-const { formatEvent } = require('../event.repository');
+const { formatEvent, EVENT_LIST_SELECT } = require('../event.repository');
 
 const toDateOnly = (value) => {
   if (!value) return null;
@@ -63,7 +63,7 @@ const managerEventRepository = {
       params
     );
     const [rows] = await pool.execute(
-      `SELECT e.*, mp.name AS package_name, s.name AS manager_name
+      `SELECT ${EVENT_LIST_SELECT}
        FROM events e
        LEFT JOIN menu_packages mp ON mp.id = e.package_id
        LEFT JOIN staff s ON s.id = e.assigned_manager_id
@@ -101,7 +101,7 @@ const managerEventRepository = {
     ];
     const params = [...managerScopeParams(staffId)];
     const [rows] = await pool.execute(
-      `SELECT e.*, mp.name AS package_name, s.name AS manager_name
+      `SELECT ${EVENT_LIST_SELECT}
        FROM events e
        LEFT JOIN menu_packages mp ON mp.id = e.package_id
        LEFT JOIN staff s ON s.id = e.assigned_manager_id
@@ -116,7 +116,7 @@ const managerEventRepository = {
     const conditions = ['e.deleted_at IS NULL', 'e.start_date > CURDATE()', MANAGER_EVENT_SCOPE_SQL];
     const params = [...managerScopeParams(staffId)];
     const [rows] = await pool.execute(
-      `SELECT e.*, mp.name AS package_name, s.name AS manager_name
+      `SELECT ${EVENT_LIST_SELECT}
        FROM events e
        LEFT JOIN menu_packages mp ON mp.id = e.package_id
        LEFT JOIN staff s ON s.id = e.assigned_manager_id

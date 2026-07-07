@@ -38,12 +38,13 @@ const {
   tableAllocationSchema,
 } = require('../../validations/domain.validation');
 const { tableNumberParamSchema } = require('../../validations/event.validation');
-const { uploadDocument } = require('../../config/multer');
+const { uploadAllTaskAttachment } = require('../../config/multer');
 const {
   managerCalendarSchema,
   createManagerEventSchema,
   updateManagerEventSchema,
   updateManagerAllTasksSchema,
+  completeManagerAllTasksSchema,
   attachmentIdParamSchema,
   managerEventFeedbackQuestionSchema,
   managerEventFeedbackQuestionIdParamSchema,
@@ -89,12 +90,17 @@ router.post('/:eventId/tasks/assign', validate(eventIdParam, 'params'), validate
 
 router.get('/:eventId/all-tasks', validate(eventIdParam, 'params'), asyncHandler(taskController.getAllTasks));
 router.patch('/:eventId/all-tasks', validate(eventIdParam, 'params'), validate(updateManagerAllTasksSchema), asyncHandler(taskController.updateAllTasks));
-router.post('/:eventId/all-tasks/complete', validate(eventIdParam, 'params'), asyncHandler(taskController.completeAllTasks));
+router.post(
+  '/:eventId/all-tasks/complete',
+  validate(eventIdParam, 'params'),
+  validate(completeManagerAllTasksSchema),
+  asyncHandler(taskController.completeAllTasks)
+);
 router.post('/:eventId/all-tasks/abandon', validate(eventIdParam, 'params'), asyncHandler(taskController.abandonAllTasks));
 router.post(
   '/:eventId/all-tasks/attachments',
   validate(eventIdParam, 'params'),
-  uploadDocument.single('file'),
+  uploadAllTaskAttachment.single('file'),
   asyncHandler(taskController.uploadAllTaskAttachment)
 );
 router.delete(

@@ -168,13 +168,33 @@ const managerAllTaskService = {
     return this.getAllTasks(staffId, eventId);
   },
 
-  async complete(staffId, eventIdOrUuid) {
+  async complete(staffId, eventIdOrUuid, data = {}) {
     const eventId = await resolveId('events', eventIdOrUuid);
     await assertManagerOwnsEvent(staffId, eventId);
 
-    const progress = await allTaskRepository.findProgressByEventId(eventId);
-    if (progress?.status === 'abandoned') {
+    const progress = await allTaskRepository.ensureProgress(eventId);
+    if (progress.status === 'completed') {
+      throw new AppError('All-tasks workflow is already completed', 400);
+    }
+    if (progress.status === 'abandoned') {
       throw new AppError('Abandoned all-tasks workflow cannot be completed', 400);
+    }
+
+    if (data.amountCollected !== undefined) {
+      await allTaskRepository.updateProgress(eventId, { amountCollected: data.amountCollected });
+    }
+
+    const [updatedProgress, attachments] = await Promise.all([
+      allTaskRepository.findProgressByEventId(eventId),
+      allTaskRepository.listAttachments(eventId),
+    ]);
+
+    const amountCollected = Number(updatedProgress?.amountCollected) || 0;
+    if (amountCollected <= 0) {
+      throw new AppError('Amount collected is required before submitting', 400);
+    }
+    if (!attachments.length) {
+      throw new AppError('At least one receipt or payment screenshot is required before submitting', 400);
     }
 
     await allTaskRepository.setStatus(eventId, 'completed');

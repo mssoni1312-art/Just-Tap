@@ -37,6 +37,9 @@ const {
   assignTasksSchema,
   listFeedbackSchema,
   listFeedbackSubmissionsSchema,
+  listFeedbackQuestionsSchema,
+  adminEventFeedbackQuestionSchema,
+  eventFeedbackQuestionIdParamSchema,
   orderTableQuerySchema,
   reportQuerySchema,
   listTasksSchema,
@@ -99,6 +102,23 @@ router.get('/:eventId/orders/report', validate(eventIdParam, 'params'), validate
 router.get('/:eventId/feedback/export', validate(eventIdParam, 'params'), validate(exportQuerySchema, 'query'), asyncHandler(feedbackController.export));
 router.get('/:eventId/feedback/summary', validate(eventIdParam, 'params'), asyncHandler(feedbackController.summary));
 router.get('/:eventId/feedback', validate(eventIdParam, 'params'), validate(listFeedbackSchema, 'query'), asyncHandler(feedbackController.list));
+router.get(
+  '/:eventId/feedback/questions',
+  validate(eventIdParam, 'params'),
+  validate(listFeedbackQuestionsSchema, 'query'),
+  asyncHandler(feedbackQuestionController.listByEvent)
+);
+router.post(
+  '/:eventId/feedback/questions',
+  validate(eventIdParam, 'params'),
+  validate(adminEventFeedbackQuestionSchema),
+  asyncHandler(feedbackQuestionController.createForEvent)
+);
+router.delete(
+  '/:eventId/feedback/questions/:questionId',
+  validate(eventFeedbackQuestionIdParamSchema, 'params'),
+  asyncHandler(feedbackQuestionController.removeForEvent)
+);
 router.get('/:eventId/feedback-questionnaire/submissions', validate(eventIdParam, 'params'), validate(listFeedbackSubmissionsSchema, 'query'), asyncHandler(feedbackQuestionController.listSubmissions));
 
 module.exports = router;

@@ -187,17 +187,20 @@ const menuPlanningSchema = Joi.object({
 });
 
 const billingFunctionChargeSchema = Joi.object({
-  label: Joi.string().required(),
+  label: Joi.alternatives().try(Joi.string(), Joi.number()).allow(null, ''),
+  description: Joi.alternatives().try(Joi.string(), Joi.number()).allow(null, ''),
   amount: Joi.number().min(0).default(0),
 });
 
 const billingFunctionSchema = Joi.object({
   eventFunctionId: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid()).allow(null),
   name: Joi.string().required(),
+  description: Joi.alternatives().try(Joi.string(), Joi.number()).allow(null, ''),
   date: Joi.date().iso().allow(null),
   startTime: Joi.string().allow(null, ''),
   pax: Joi.number().integer().min(0).allow(null),
-  extraCharges: Joi.number().min(0).default(0),
+  extraCharges: Joi.number().min(0),
+  extraAmount: Joi.number().min(0),
   ratePerPlate: Joi.number().min(0).allow(null),
   amount: Joi.number().min(0).allow(null),
   charges: Joi.array().items(billingFunctionChargeSchema).default([]),
@@ -224,6 +227,7 @@ const saveBillingPreviewSchema = Joi.object({
   functions: Joi.array().items(billingFunctionSchema).default([]),
   estimate: billingEstimateSchema.default({}),
   payments: Joi.array().items(billingPaymentSchema).default([]),
+  advancePayments: Joi.array().items(billingPaymentSchema),
   notes: Joi.string().allow(null, '').default(''),
 });
 
@@ -369,6 +373,13 @@ const savePackageSettingsSchema = Joi.object({
 
 const questionTypeSchema = Joi.string().valid('rating', 'text', 'single_choice', 'multiple_choice', 'yes_no');
 
+const optionalQuestionTypeSchema = Joi.string()
+  .trim()
+  .lowercase()
+  .empty(['', null])
+  .default('rating')
+  .valid('rating', 'text', 'single_choice', 'multiple_choice', 'yes_no');
+
 const createFeedbackQuestionSchema = Joi.object({
   questionText: Joi.string().required(),
   questionType: questionTypeSchema.required(),
@@ -428,6 +439,37 @@ const submitFeedbackQuestionnaireSchema = Joi.object({
 
 const listFeedbackSubmissionsSchema = paginationQuery;
 
+const adminEventFeedbackQuestionSchema = Joi.object({
+  questionText: Joi.string().trim(),
+  question: Joi.string().trim(),
+  questionType: optionalQuestionTypeSchema,
+  options: Joi.alternatives().try(
+    Joi.array().items(Joi.string()).min(2),
+    Joi.object({
+      audience: Joi.string().valid('guest_catering', 'client_service'),
+    })
+  ),
+  isRequired: Joi.boolean().default(true),
+  sortOrder: Joi.number().integer().min(0),
+  isActive: Joi.boolean().default(true),
+  audience: Joi.string().valid('guest_catering', 'client_service'),
+}).custom((value, helpers) => {
+  const questionText = value.questionText || value.question;
+  if (!questionText) {
+    return helpers.error('any.custom', { message: 'questionText or question is required' });
+  }
+  return {
+    ...value,
+    questionText,
+    questionType: value.questionType || 'rating',
+  };
+});
+
+const eventFeedbackQuestionIdParamSchema = Joi.object({
+  eventId: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid(), Joi.string().pattern(/^\d+$/)).required(),
+  questionId: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid(), Joi.string().pattern(/^\d+$/)).required(),
+});
+
 module.exports = {
   listInquiriesSchema,
   createInquirySchema,
@@ -486,4 +528,6 @@ module.exports = {
   publicFeedbackQuestionsSchema,
   submitFeedbackQuestionnaireSchema,
   listFeedbackSubmissionsSchema,
+  adminEventFeedbackQuestionSchema,
+  eventFeedbackQuestionIdParamSchema,
 };

@@ -22,6 +22,7 @@ const formatBilling = (row, functions, payments) => {
       grandTotal,
     },
     payments,
+    advancePayments: payments,
     totalPaid,
     remainingPayment: Math.max(grandTotal - totalPaid, 0),
     notes: row.notes || '',
@@ -61,19 +62,24 @@ const billingRepository = {
         [row.id]
       );
 
+      const extraAmount = toNumber(row.extra_charges) || 0;
+
       functions.push({
         id: String(row.id),
         eventFunctionId: row.event_function_id ? String(row.event_function_id) : null,
         name: row.name,
+        description: row.description || '',
         date: row.function_date,
         startTime: toMysqlTime(row.start_time),
         pax: row.pax,
-        extraCharges: toNumber(row.extra_charges) || 0,
+        extraCharges: extraAmount,
+        extraAmount,
         ratePerPlate: toNumber(row.rate_per_plate),
         amount: toNumber(row.amount),
         charges: chargeRows.map((c) => ({
           id: String(c.id),
           label: c.label,
+          description: c.label,
           amount: toNumber(c.amount) || 0,
         })),
       });
@@ -175,17 +181,18 @@ const billingRepository = {
       for (const [i, fn] of functions.entries()) {
         const [fnResult] = await conn.execute(
           `INSERT INTO event_billing_functions (
-            billing_id, event_function_id, name, function_date, start_time, pax,
+            billing_id, event_function_id, name, description, function_date, start_time, pax,
             extra_charges, rate_per_plate, amount, sort_order
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             billingId,
             fn.eventFunctionId || null,
             fn.name,
+            fn.description || null,
             toMysqlDate(fn.date),
             toMysqlTime(fn.startTime),
             fn.pax ?? null,
-            fn.extraCharges ?? 0,
+            fn.extraCharges ?? fn.extraAmount ?? 0,
             fn.ratePerPlate ?? null,
             fn.amount ?? null,
             i,

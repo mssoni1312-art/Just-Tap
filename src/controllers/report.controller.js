@@ -25,6 +25,13 @@ module.exports = {
       'Photo uploaded',
       201,
     ),
+  uploadClientLogo: async (req, res) =>
+    sendSuccess(
+      res,
+      await reportService.uploadClientLogo(req.body.reportId, req.file, req.user.id),
+      'Client logo uploaded',
+      201,
+    ),
   deletePhoto: async (req, res) =>
     sendSuccess(
       res,
@@ -51,6 +58,12 @@ module.exports = {
       res,
       await reportService.updatePhotoFilter(req.body.reportId, req.body, req.user.id),
       'Photo filter updated',
+    ),
+  updateClientDetails: async (req, res) =>
+    sendSuccess(
+      res,
+      await reportService.updateClientDetails(req.body, req.user.id),
+      'Client details updated',
     ),
   saveDraft: async (req, res) =>
     sendSuccess(res, await reportService.saveDraft(req.body.reportId, req.body, req.user.id), 'Draft saved'),

@@ -130,6 +130,12 @@ const updateManagerAllTasksSchema = Joi.object({
   amountCollected: Joi.number().min(0),
 }).min(1);
 
+const completeManagerAllTasksSchema = Joi.object({
+  amountCollected: Joi.number().min(0).description(
+    'Optional on submit — saves the collected amount before completing. Required overall (saved or in body).'
+  ),
+});
+
 const attachmentIdParamSchema = Joi.object({
   eventId: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid()).required(),
   attachmentId: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid()).required(),
@@ -152,6 +158,7 @@ module.exports = {
   createManagerTaskSchema,
   updateManagerEventTaskSchema,
   updateManagerAllTasksSchema,
+  completeManagerAllTasksSchema,
   attachmentIdParamSchema,
   managerEventFeedbackQuestionSchema,
   managerEventFeedbackQuestionIdParamSchema,

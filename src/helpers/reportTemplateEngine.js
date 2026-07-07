@@ -214,7 +214,7 @@ function buildViewModel(report, menuItems, brideGroomImages, baseUrl) {
   const heroImage = cardBackground || brideImage || gallery[0] || null;
   const coverImage = heroImage;
   const backgroundImage = resolveAssetUrl(report.template?.previewUrl, baseUrl);
-  const logo = resolveAssetUrl(report.package?.logoUrl, baseUrl);
+  const logo = resolveAssetUrl(report.clientLogoUrl || report.package?.logoUrl, baseUrl);
 
   const coupleName = [report.brideName, report.groomName].filter(Boolean).join(' & ')
     || report.clientName

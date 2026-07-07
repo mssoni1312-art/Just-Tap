@@ -9380,6 +9380,93 @@
         }
       }
     },
+    "/report/upload-client-logo": {
+      "post": {
+        "tags": [
+          "Manager",
+          "Manager Report"
+        ],
+        "summary": "Upload client logo",
+        "description": "Upload a client/caterer logo image for the report. Stored on the report and used in PDF generation.",
+        "operationId": "managerReportUploadClientLogo",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file",
+                  "reportId"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "reportId": {
+                    "$ref": "#/components/schemas/IdParam"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ReportClientLogoUploadResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
     "/report/photo/{photoId}": {
       "delete": {
         "tags": [
@@ -9494,6 +9581,93 @@
                       "properties": {
                         "data": {
                           "$ref": "#/components/schemas/ReportDetail"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/report/template/upload": {
+      "post": {
+        "tags": [
+          "Manager",
+          "Manager Report"
+        ],
+        "summary": "Upload custom template",
+        "description": "Upload a custom menu design image and add it to the template library.",
+        "operationId": "managerReportUploadTemplate",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 150
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ReportTemplate"
                         }
                       }
                     }
@@ -9772,6 +9946,80 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/UpdateReportPhotoFilterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ReportDetail"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/report/client-details": {
+      "patch": {
+        "tags": [
+          "Manager",
+          "Manager Report"
+        ],
+        "summary": "Update client details",
+        "description": "Update client/couple and event display fields on the linked event for a report (client name, bride/groom names, date, venue, city).",
+        "operationId": "managerReportUpdateClientDetails",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateReportClientDetailsRequest"
               }
             }
           }
@@ -10351,7 +10599,7 @@
           "Manager",
           "Manager Events"
         ],
-        "summary": "List manager events",
+        "summary": "List manager events (includes assigned manager names)",
         "description": "",
         "operationId": "managerEventsList",
         "security": [
@@ -10439,7 +10687,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SuccessResponse"
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/EventListResponse"
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -11595,8 +11854,8 @@
           "Manager",
           "Manager Tasks"
         ],
-        "summary": "Mark All Tasks as completed",
-        "description": "",
+        "summary": "Submit and complete All Tasks",
+        "description": "Marks the All Tasks workflow as completed. Requires **amount collected** (saved via PATCH or sent in body) and **at least one attachment** (receipt/payment screenshot).",
         "operationId": "managerEventAllTasksComplete",
         "security": [
           {
@@ -11614,6 +11873,16 @@
             "description": "Event ID (numeric or UUID)"
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteManagerAllTasksRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Operation successful",
@@ -12962,6 +13231,17 @@
           }
         }
       },
+      "CompleteManagerAllTasksRequest": {
+        "type": "object",
+        "description": "Optional body for Submit. Send amountCollected here to save and complete in one call, or save it earlier via PATCH /all-tasks.",
+        "properties": {
+          "amountCollected": {
+            "type": "number",
+            "minimum": 0,
+            "example": 32300
+          }
+        }
+      },
       "ManagerAllTaskAttachment": {
         "type": "object",
         "properties": {
@@ -13362,6 +13642,80 @@
             }
           }
         ]
+      },
+      "EventListItem": {
+        "type": "object",
+        "description": "Event summary returned in list, today, and upcoming responses.",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clientName": {
+            "type": "string"
+          },
+          "venueName": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EventStatus"
+          },
+          "managerName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Comma-separated names of all assigned managers"
+          },
+          "managerNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Names of all assigned managers"
+          },
+          "assignedManagerIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Staff IDs of all assigned managers"
+          },
+          "assignedManagerId": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Primary manager (first in assignedManagerIds)"
+          }
+        }
+      },
+      "EventListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventListItem"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        }
+      },
+      "EventListItemsArray": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/EventListItem"
+        }
       },
       "EventDetail": {
         "allOf": [
@@ -15016,6 +15370,60 @@
           }
         }
       },
+      "CreateEventFeedbackQuestionRequest": {
+        "type": "object",
+        "properties": {
+          "questionText": {
+            "type": "string",
+            "example": "How was Food?"
+          },
+          "question": {
+            "type": "string",
+            "example": "Service Speed",
+            "description": "Alias for questionText"
+          },
+          "questionType": {
+            "type": "string",
+            "enum": [
+              "rating",
+              "text",
+              "single_choice",
+              "multiple_choice",
+              "yes_no"
+            ],
+            "default": "rating"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "Yes",
+              "No"
+            ]
+          },
+          "isRequired": {
+            "type": "boolean",
+            "default": true
+          },
+          "sortOrder": {
+            "type": "integer"
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          },
+          "audience": {
+            "type": "string",
+            "enum": [
+              "guest_catering",
+              "client_service"
+            ],
+            "description": "Optional audience tag for guest/client feedback flows"
+          }
+        }
+      },
       "UpdateFeedbackQuestionRequest": {
         "type": "object",
         "properties": {
@@ -15253,14 +15661,16 @@
       },
       "BillingFunctionCharge": {
         "type": "object",
-        "required": [
-          "label",
-          "amount"
-        ],
         "properties": {
           "label": {
             "type": "string",
-            "example": "Decoration"
+            "example": "Decoration",
+            "description": "Charge label (alias: description)"
+          },
+          "description": {
+            "type": "string",
+            "example": "Decoration",
+            "description": "Alias for label"
           },
           "amount": {
             "type": "number",
@@ -15282,6 +15692,11 @@
             "type": "string",
             "example": "Dinner"
           },
+          "description": {
+            "type": "string",
+            "example": "Main reception dinner",
+            "description": "Function-level description"
+          },
           "date": {
             "type": "string",
             "format": "date",
@@ -15297,7 +15712,13 @@
           },
           "extraCharges": {
             "type": "number",
-            "example": 0
+            "example": 0,
+            "description": "Extra amount for this function"
+          },
+          "extraAmount": {
+            "type": "number",
+            "example": 0,
+            "description": "Alias for extraCharges"
           },
           "ratePerPlate": {
             "type": "number",
@@ -15362,7 +15783,8 @@
           },
           "description": {
             "type": "string",
-            "example": "Bank Transfer"
+            "example": "Bank Transfer",
+            "description": "Payment method or note"
           }
         }
       },
@@ -15387,7 +15809,15 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/BillingPayment"
-            }
+            },
+            "description": "Advance payment entries (alias: advancePayments)"
+          },
+          "advancePayments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillingPayment"
+            },
+            "description": "Advance payment list (alias for payments)"
           },
           "notes": {
             "type": "string",
@@ -15428,6 +15858,13 @@
             "items": {
               "$ref": "#/components/schemas/BillingPayment"
             }
+          },
+          "advancePayments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillingPayment"
+            },
+            "description": "Advance payment list (same as payments)"
           },
           "totalPaid": {
             "type": "number"
@@ -15481,6 +15918,13 @@
             "items": {
               "$ref": "#/components/schemas/BillingPayment"
             }
+          },
+          "advancePayments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillingPayment"
+            },
+            "description": "Advance payment list (same as payments)"
           },
           "totalPaid": {
             "type": "number"
@@ -16010,6 +16454,68 @@
           }
         }
       },
+      "UpdateReportClientDetailsRequest": {
+        "type": "object",
+        "properties": {
+          "reportId": {
+            "$ref": "#/components/schemas/IdParam",
+            "description": "Report ID (numeric or UUID). Provide reportId or eventId."
+          },
+          "eventId": {
+            "$ref": "#/components/schemas/IdParam",
+            "description": "Event ID (numeric or UUID). Provide reportId or eventId."
+          },
+          "clientName": {
+            "type": "string",
+            "example": "Rajesh Kumar"
+          },
+          "clientMobile": {
+            "type": "string",
+            "nullable": true,
+            "example": "9876543210"
+          },
+          "brideName": {
+            "type": "string",
+            "nullable": true,
+            "example": "Priya"
+          },
+          "groomName": {
+            "type": "string",
+            "nullable": true,
+            "example": "Amit"
+          },
+          "eventStartDate": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-12-15"
+          },
+          "functionName": {
+            "type": "string",
+            "nullable": true,
+            "example": "Wedding Reception"
+          },
+          "venueName": {
+            "type": "string",
+            "example": "Grand Ballroom"
+          },
+          "cityName": {
+            "type": "string",
+            "example": "Mumbai"
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "reportId"
+            ]
+          },
+          {
+            "required": [
+              "eventId"
+            ]
+          }
+        ]
+      },
       "SaveReportDraftRequest": {
         "type": "object",
         "required": [
@@ -16232,6 +16738,11 @@
             "format": "uri",
             "nullable": true
           },
+          "clientLogoUrl": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
           "typography": {
             "type": "object"
           },
@@ -16283,6 +16794,28 @@
           },
           "setAsBrideGroomPhoto": {
             "type": "boolean"
+          }
+        }
+      },
+      "ReportClientLogoUploadResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "originalName": {
+            "type": "string"
+          },
+          "reportId": {
+            "type": "string"
+          },
+          "clientLogoUrl": {
+            "type": "string",
+            "format": "uri"
           }
         }
       },

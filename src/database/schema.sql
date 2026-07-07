@@ -1017,6 +1017,7 @@ CREATE TABLE IF NOT EXISTS report_master (
   include_menu_in_template TINYINT(1)      NOT NULL DEFAULT 1,
   layout_position          ENUM('top', 'background', 'side') NULL,
   bride_groom_photo_url    VARCHAR(500)    NULL,
+  client_logo_url          VARCHAR(500)    NULL,
   created_by               BIGINT UNSIGNED NULL,
   updated_by               BIGINT UNSIGNED NULL,
   published_at             DATETIME        NULL,

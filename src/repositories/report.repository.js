@@ -213,6 +213,7 @@ const reportRepository = {
       includeMenuInTemplate: Boolean(row.include_menu_in_template),
       layoutPosition: row.layout_position || null,
       brideGroomPhotoUrl: row.bride_groom_photo_url || null,
+      clientLogoUrl: row.client_logo_url || null,
       typography: parseJson(settings.typography, DEFAULT_TYPOGRAPHY),
       grid: parseJson(settings.grid, DEFAULT_GRID),
       photoFilter: parseJson(settings.photo_filter, DEFAULT_PHOTO_FILTER),
@@ -285,6 +286,13 @@ const reportRepository = {
     }
   },
 
+  async touchMaster(reportId, userId) {
+    await pool.execute(
+      `UPDATE report_master SET updated_by = ?, updated_at = NOW() WHERE id = ? AND deleted_at IS NULL`,
+      [userId, reportId]
+    );
+  },
+
   async updateMaster(reportId, fields, userId) {
     const sets = [];
     const params = [];
@@ -308,6 +316,10 @@ const reportRepository = {
     if (fields.brideGroomPhotoUrl !== undefined) {
       sets.push('bride_groom_photo_url = ?');
       params.push(fields.brideGroomPhotoUrl);
+    }
+    if (fields.clientLogoUrl !== undefined) {
+      sets.push('client_logo_url = ?');
+      params.push(fields.clientLogoUrl);
     }
     if (fields.status !== undefined) {
       sets.push('status = ?');
