@@ -8,7 +8,11 @@ const generateAccessToken = (payload) =>
   jwt.sign(payload, jwtConfig.accessSecret, { expiresIn: jwtConfig.accessExpiresIn });
 
 const generateRefreshToken = (payload) =>
-  jwt.sign(payload, jwtConfig.refreshSecret, { expiresIn: jwtConfig.refreshExpiresIn });
+  jwt.sign(
+    { ...payload, jti: crypto.randomUUID() },
+    jwtConfig.refreshSecret,
+    { expiresIn: jwtConfig.refreshExpiresIn }
+  );
 
 const verifyAccessToken = (token) => jwt.verify(token, jwtConfig.accessSecret);
 

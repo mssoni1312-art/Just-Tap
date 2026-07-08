@@ -3,9 +3,11 @@ const rateLimit = require('express-rate-limit');
 const limiterOptions = {
   standardHeaders: true,
   legacyHeaders: false,
-  // Railway sits behind a reverse proxy; disable strict X-Forwarded-For validation
-  // so rate limiting never throws and drops the connection mid-request.
-  validate: { trustProxy: false, xForwardedForHeader: false },
+  // Railway sits behind a reverse proxy; never let validation throw and drop
+  // the TCP connection before Express can send a response header.
+  validate: false,
+  passOnStoreError: true,
+  keyGenerator: (req) => req.ip || req.socket?.remoteAddress || 'unknown',
 };
 
 const authLimiter = rateLimit({

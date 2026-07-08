@@ -24,8 +24,17 @@ const getRefreshExpiry = () => {
 const issueManagerTokens = async (user, staff) => {
   const payload = { id: user.id, email: user.email, role: user.role };
   const token = generateAccessToken(payload);
-  const refreshToken = generateRefreshToken(payload);
-  await authRepository.createRefreshToken(user.id, refreshToken, getRefreshExpiry());
+  let refreshToken = generateRefreshToken(payload);
+  const expiresAt = getRefreshExpiry();
+
+  try {
+    await authRepository.createRefreshToken(user.id, refreshToken, expiresAt);
+  } catch (err) {
+    if (err.code !== 'ER_DUP_ENTRY') throw err;
+    refreshToken = generateRefreshToken(payload);
+    await authRepository.createRefreshToken(user.id, refreshToken, expiresAt);
+  }
+
   return {
     token,
     refreshToken,
@@ -38,7 +47,7 @@ const issueManagerTokens = async (user, staff) => {
 };
 
 const assertManagerUser = async (identifier) => {
-  const user = await userRepository.findByEmailOrPhone(identifier);
+  const user = await userRepository.findAuthByEmailOrPhone(identifier);
   if (!user || user.role !== 'manager') {
     throw new AppError('Invalid credentials', 401);
   }

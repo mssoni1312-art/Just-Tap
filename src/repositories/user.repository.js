@@ -14,6 +14,21 @@ const userRepository = {
     return rows[0] || null;
   },
 
+  async findAuthByEmailOrPhone(identifier) {
+    const normalized = String(identifier || '').trim();
+    const lookupEmail = normalized.includes('@') ? normalized.toLowerCase() : normalized;
+    const [rows] = await pool.execute(
+      `SELECT id, email, phone, password_hash, first_name, last_name, handle, avatar_url,
+              role, status, last_login_at, created_at, updated_at
+       FROM users
+       WHERE deleted_at IS NULL AND status = 'active'
+       AND (email = ? OR phone = ?)
+       LIMIT 1`,
+      [lookupEmail, normalized]
+    );
+    return rows[0] || null;
+  },
+
   async findById(id) {
     const [rows] = await pool.execute(
       `SELECT id, email, phone, first_name, last_name, handle, avatar_url, role, status,
