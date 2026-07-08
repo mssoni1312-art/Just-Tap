@@ -3,8 +3,26 @@ const { idParam, paginationQuery, exportQuerySchema, bulkIdsSchema, importRecord
 
 const listInquiriesSchema = paginationQuery.keys({
   status: Joi.string().valid('pending', 'converted'),
+  source: Joi.string().valid('admin', 'client'),
   startDate: Joi.date().iso(),
   endDate: Joi.date().iso(),
+});
+
+const clientInquiryDaySchema = Joi.object({
+  date: Joi.date().iso().required(),
+  venueName: Joi.string().trim().required(),
+  functionName: Joi.string().trim().required(),
+  city: Joi.string().trim().required(),
+  tabletsCount: Joi.number().integer().min(1).required(),
+  timeSlot: Joi.string().trim().required(),
+});
+
+const createClientInquirySchema = Joi.object({
+  companyName: Joi.string().trim().required(),
+  contactNumber: Joi.string().trim().required(),
+  dateType: Joi.string().valid('single', 'multiple').required(),
+  totalEstimate: Joi.number().precision(2).min(0).allow(null),
+  eventDay: clientInquiryDaySchema.required(),
 });
 
 const createInquirySchema = Joi.object({
@@ -465,6 +483,56 @@ const adminEventFeedbackQuestionSchema = Joi.object({
   };
 });
 
+const createDiscoverExperienceSchema = Joi.object({
+  description: Joi.string().trim().required(),
+  sortOrder: Joi.number().integer().min(0).default(0),
+});
+
+const updateDiscoverExperienceSchema = Joi.object({
+  description: Joi.string().trim(),
+  sortOrder: Joi.number().integer().min(0),
+}).min(1);
+
+const createTestimonialSchema = Joi.object({
+  rating: Joi.number().integer().min(1).max(5).required(),
+  name: Joi.string().trim().required(),
+  description: Joi.string().trim().required(),
+  sortOrder: Joi.number().integer().min(0).default(0),
+});
+
+const updateTestimonialSchema = Joi.object({
+  rating: Joi.number().integer().min(1).max(5),
+  name: Joi.string().trim(),
+  description: Joi.string().trim(),
+  sortOrder: Joi.number().integer().min(0),
+}).min(1);
+
+const listClientEventTitlesSchema = Joi.object({
+  forSelect: Joi.string().valid('true', 'false'),
+  includeInactive: Joi.string().valid('true', 'false'),
+  search: Joi.string().trim().allow(''),
+});
+
+const createClientEventTitleSchema = Joi.object({
+  name: Joi.string().trim().required(),
+  sortOrder: Joi.number().integer().min(0).default(0),
+  isActive: Joi.boolean().default(true),
+});
+
+const createReelSchema = Joi.object({
+  ourEventId: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid()).required(),
+  name: Joi.string().trim().required(),
+  venueName: Joi.string().trim().required(),
+  guestCount: Joi.number().integer().min(1).required(),
+});
+
+const clientFlowReelsListSchema = Joi.object({
+  page: Joi.number().integer().min(1),
+  limit: Joi.number().integer().min(1).max(100),
+  ourEventId: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid()),
+  search: Joi.string().trim().allow(''),
+});
+
 const eventFeedbackQuestionIdParamSchema = Joi.object({
   eventId: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid(), Joi.string().pattern(/^\d+$/)).required(),
   questionId: Joi.alternatives().try(Joi.number().integer(), Joi.string().uuid(), Joi.string().pattern(/^\d+$/)).required(),
@@ -530,4 +598,13 @@ module.exports = {
   listFeedbackSubmissionsSchema,
   adminEventFeedbackQuestionSchema,
   eventFeedbackQuestionIdParamSchema,
+  createDiscoverExperienceSchema,
+  updateDiscoverExperienceSchema,
+  createTestimonialSchema,
+  updateTestimonialSchema,
+  listClientEventTitlesSchema,
+  createClientEventTitleSchema,
+  createReelSchema,
+  clientFlowReelsListSchema,
+  createClientInquirySchema,
 };

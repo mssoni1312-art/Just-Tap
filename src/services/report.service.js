@@ -49,7 +49,9 @@ async function resolveReportId(reportIdOrUuid) {
   return resolveId('report_master', reportIdOrUuid);
 }
 
-async function assertReportAccess(reportId, userId) {
+async function assertReportAccess(reportId, userId, options = {}) {
+  if (options.skipAccessCheck) return;
+
   const ownerId = await reportRepository.getOwnerId(reportId);
   if (!ownerId) throw new AppError('Report not found', 404);
   if (String(ownerId) !== String(userId)) {
@@ -130,25 +132,25 @@ const reportService = {
     };
   },
 
-  async getById(reportIdOrUuid, userId) {
+  async getById(reportIdOrUuid, userId, options = {}) {
     const reportId = await resolveReportId(reportIdOrUuid);
-    await assertReportAccess(reportId, userId);
+    await assertReportAccess(reportId, userId, options);
     const report = await reportRepository.findById(reportId);
     if (!report) throw new AppError('Report not found', 404);
     return report;
   },
 
-  async getByEventId(eventIdOrUuid, userId) {
+  async getByEventId(eventIdOrUuid, userId, options = {}) {
     const eventId = await resolveId('events', eventIdOrUuid);
     const existingReportId = await reportRepository.findByEventId(eventId);
     if (!existingReportId) throw new AppError('Report not found', 404);
-    await assertReportAccess(existingReportId, userId);
+    await assertReportAccess(existingReportId, userId, options);
     const report = await reportRepository.findById(existingReportId);
     if (!report) throw new AppError('Report not found', 404);
     return report;
   },
 
-  async deletePhoto(photoId, userId) {
+  async deletePhoto(photoId, userId, options = {}) {
     const numericPhotoId = Number(photoId);
     if (!Number.isInteger(numericPhotoId) || numericPhotoId <= 0) {
       throw new AppError('Photo not found', 404);
@@ -157,7 +159,7 @@ const reportService = {
     const photo = await reportRepository.findPhotoById(numericPhotoId);
     if (!photo) throw new AppError('Photo not found', 404);
 
-    await assertReportAccess(photo.reportId, userId);
+    await assertReportAccess(photo.reportId, userId, options);
 
     const report = await reportRepository.findById(photo.reportId);
     if (report?.brideGroomPhotoUrl && report.brideGroomPhotoUrl === photo.imageUrl) {
@@ -173,9 +175,9 @@ const reportService = {
     };
   },
 
-  async uploadPhoto(reportIdOrUuid, file, userId, body = {}) {
+  async uploadPhoto(reportIdOrUuid, file, userId, body = {}, options = {}) {
     const reportId = await resolveReportId(reportIdOrUuid);
-    await assertReportAccess(reportId, userId);
+    await assertReportAccess(reportId, userId, options);
 
     const upload = await uploadService.saveUpload(userId, file, 'image');
     const sortOrder = body.sortOrder != null ? Number(body.sortOrder) : 0;
@@ -229,9 +231,9 @@ const reportService = {
     return template;
   },
 
-  async selectTemplate(reportIdOrUuid, data, userId) {
+  async selectTemplate(reportIdOrUuid, data, userId, options = {}) {
     const reportId = await resolveReportId(reportIdOrUuid);
-    await assertReportAccess(reportId, userId);
+    await assertReportAccess(reportId, userId, options);
 
     const templateId = await resolveId('report_templates', data.templateId);
     const template = await reportRepository.findTemplateById(templateId);
@@ -246,9 +248,9 @@ const reportService = {
     return reportRepository.findById(reportId);
   },
 
-  async updateTheme(reportIdOrUuid, data, userId) {
+  async updateTheme(reportIdOrUuid, data, userId, options = {}) {
     const reportId = await resolveReportId(reportIdOrUuid);
-    await assertReportAccess(reportId, userId);
+    await assertReportAccess(reportId, userId, options);
 
     const report = await reportRepository.findById(reportId);
     if (!report) throw new AppError('Report not found', 404);
@@ -260,9 +262,9 @@ const reportService = {
     return reportRepository.findById(reportId);
   },
 
-  async updateTypography(reportIdOrUuid, data, userId) {
+  async updateTypography(reportIdOrUuid, data, userId, options = {}) {
     const reportId = await resolveReportId(reportIdOrUuid);
-    await assertReportAccess(reportId, userId);
+    await assertReportAccess(reportId, userId, options);
 
     const report = await reportRepository.findById(reportId);
     if (!report) throw new AppError('Report not found', 404);
@@ -279,9 +281,9 @@ const reportService = {
     return reportRepository.findById(reportId);
   },
 
-  async updateGrid(reportIdOrUuid, data, userId) {
+  async updateGrid(reportIdOrUuid, data, userId, options = {}) {
     const reportId = await resolveReportId(reportIdOrUuid);
-    await assertReportAccess(reportId, userId);
+    await assertReportAccess(reportId, userId, options);
 
     const report = await reportRepository.findById(reportId);
     if (!report) throw new AppError('Report not found', 404);
@@ -298,9 +300,9 @@ const reportService = {
     return reportRepository.findById(reportId);
   },
 
-  async updatePhotoFilter(reportIdOrUuid, data, userId) {
+  async updatePhotoFilter(reportIdOrUuid, data, userId, options = {}) {
     const reportId = await resolveReportId(reportIdOrUuid);
-    await assertReportAccess(reportId, userId);
+    await assertReportAccess(reportId, userId, options);
 
     const report = await reportRepository.findById(reportId);
     if (!report) throw new AppError('Report not found', 404);
@@ -364,9 +366,9 @@ const reportService = {
     return reportRepository.findById(reportId);
   },
 
-  async saveDraft(reportIdOrUuid, data, userId) {
+  async saveDraft(reportIdOrUuid, data, userId, options = {}) {
     const reportId = await resolveReportId(reportIdOrUuid);
-    await assertReportAccess(reportId, userId);
+    await assertReportAccess(reportId, userId, options);
 
     const masterUpdate = { status: 'draft' };
     if (data.packageId !== undefined) {
@@ -383,9 +385,9 @@ const reportService = {
     return reportRepository.findById(reportId);
   },
 
-  async publish(reportIdOrUuid, userId) {
+  async publish(reportIdOrUuid, userId, options = {}) {
     const reportId = await resolveReportId(reportIdOrUuid);
-    await assertReportAccess(reportId, userId);
+    await assertReportAccess(reportId, userId, options);
 
     const report = await reportRepository.findById(reportId);
     if (!report) throw new AppError('Report not found', 404);
@@ -410,9 +412,9 @@ const reportService = {
     return reportRepository.findById(reportId);
   },
 
-  async share(reportIdOrUuid, data, userId) {
+  async share(reportIdOrUuid, data, userId, options = {}) {
     const reportId = await resolveReportId(reportIdOrUuid);
-    await assertReportAccess(reportId, userId);
+    await assertReportAccess(reportId, userId, options);
 
     const report = await reportRepository.findById(reportId);
     if (!report) throw new AppError('Report not found', 404);

@@ -1,3 +1,4 @@
+const fs = require('fs');
 const multer = require('multer');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
@@ -90,11 +91,41 @@ const uploadAllTaskAttachment = multer({
   fileFilter: allTaskAttachmentFilter,
 });
 
+const videoMaxSizeMb = Number(process.env.UPLOAD_MAX_VIDEO_SIZE_MB) || 100;
+const videoStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    const dir = path.join(process.cwd(), 'uploads', 'videos');
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${uuidv4()}${ext}`);
+  },
+});
+
+const videoFilter = (_req, file, cb) => {
+  const allowed = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v'];
+  if (allowed.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only MP4, MOV, and WebM videos are allowed'), false);
+  }
+};
+
+const uploadVideo = multer({
+  storage: videoStorage,
+  limits: { fileSize: videoMaxSizeMb * 1024 * 1024 },
+  fileFilter: videoFilter,
+});
+
 module.exports = {
   uploadImage,
   uploadDocument,
   uploadImport,
   uploadAllTaskAttachment,
+  uploadVideo,
   maxSizeMb,
   allTaskAttachmentMaxSizeMb,
+  videoMaxSizeMb,
 };

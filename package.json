@@ -8,7 +8,7 @@
     "start": "node src/server.js",
     "start:prod": "NODE_ENV=production node src/server.js",
     "dev": "npm run dev:prepare && HOST=0.0.0.0 SKIP_REDIS=true node --watch src/server.js",
-    "dev:prepare": "docker compose up -d mysql 2>/dev/null || true && npm run wait:services",
+    "dev:prepare": "docker compose up -d mysql && SKIP_REDIS=true npm run wait:services",
     "db:setup": "node src/database/setup.js setup",
     "db:migrate": "node src/database/setup.js migrate",
     "db:seed": "node src/database/setup.js seed",

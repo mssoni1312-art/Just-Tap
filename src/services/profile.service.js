@@ -51,7 +51,7 @@ const uploadService = {
   async saveUpload(userId, file, type) {
     if (!file) throw new AppError('No file uploaded', 400);
     const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-    const folder = type === 'document' ? 'documents' : 'images';
+    const folder = type === 'document' ? 'documents' : type === 'video' ? 'videos' : 'images';
     const url = `${baseUrl}/uploads/${folder}/${file.filename}`;
     const id = await uploadRepository.create({
       user_id: userId,

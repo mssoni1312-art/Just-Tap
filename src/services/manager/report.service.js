@@ -5,6 +5,8 @@ const { resolveId } = require('../../helpers/idResolver');
 const reportRepository = require('../../repositories/report.repository');
 const AppError = require('../../utils/AppError');
 
+const MANAGER_REPORT_OPTIONS = { skipAccessCheck: true };
+
 const assertManagerOwnsReportEvent = async (staffId, reportIdOrUuid) => {
   const reportId = await resolveId('report_master', reportIdOrUuid);
   const eventId = await reportRepository.getEventId(reportId);
@@ -25,18 +27,18 @@ const managerReportService = {
 
   async getById(staffId, reportIdOrUuid, userId) {
     await assertManagerOwnsReportEvent(staffId, reportIdOrUuid);
-    return reportService.getById(reportIdOrUuid, userId);
+    return reportService.getById(reportIdOrUuid, userId, MANAGER_REPORT_OPTIONS);
   },
 
   async getByEventId(staffId, eventIdOrUuid, userId) {
     const eventId = await resolveId('events', eventIdOrUuid);
     await assertManagerOwnsEvent(staffId, eventId);
-    return reportService.getByEventId(eventIdOrUuid, userId);
+    return reportService.getByEventId(eventIdOrUuid, userId, MANAGER_REPORT_OPTIONS);
   },
 
   uploadPhoto: async (staffId, reportId, file, userId, body) => {
     await assertManagerOwnsReportEvent(staffId, reportId);
-    return reportService.uploadPhoto(reportId, file, userId, body);
+    return reportService.uploadPhoto(reportId, file, userId, body, MANAGER_REPORT_OPTIONS);
   },
 
   uploadClientLogo: async (staffId, reportId, file, userId) => {
@@ -56,32 +58,32 @@ const managerReportService = {
     if (!photo) throw new AppError('Photo not found', 404);
 
     await assertManagerOwnsReportEvent(staffId, photo.reportId);
-    return reportService.deletePhoto(photoId, userId);
+    return reportService.deletePhoto(photoId, userId, MANAGER_REPORT_OPTIONS);
   },
 
   selectTemplate: async (staffId, reportId, data, userId) => {
     await assertManagerOwnsReportEvent(staffId, reportId);
-    return reportService.selectTemplate(reportId, data, userId);
+    return reportService.selectTemplate(reportId, data, userId, MANAGER_REPORT_OPTIONS);
   },
 
   updateTheme: async (staffId, reportId, data, userId) => {
     await assertManagerOwnsReportEvent(staffId, reportId);
-    return reportService.updateTheme(reportId, data, userId);
+    return reportService.updateTheme(reportId, data, userId, MANAGER_REPORT_OPTIONS);
   },
 
   updateTypography: async (staffId, reportId, data, userId) => {
     await assertManagerOwnsReportEvent(staffId, reportId);
-    return reportService.updateTypography(reportId, data, userId);
+    return reportService.updateTypography(reportId, data, userId, MANAGER_REPORT_OPTIONS);
   },
 
   updateGrid: async (staffId, reportId, data, userId) => {
     await assertManagerOwnsReportEvent(staffId, reportId);
-    return reportService.updateGrid(reportId, data, userId);
+    return reportService.updateGrid(reportId, data, userId, MANAGER_REPORT_OPTIONS);
   },
 
   updatePhotoFilter: async (staffId, reportId, data, userId) => {
     await assertManagerOwnsReportEvent(staffId, reportId);
-    return reportService.updatePhotoFilter(reportId, data, userId);
+    return reportService.updatePhotoFilter(reportId, data, userId, MANAGER_REPORT_OPTIONS);
   },
 
   updateClientDetails: async (staffId, data, userId) => {
@@ -96,32 +98,32 @@ const managerReportService = {
 
   saveDraft: async (staffId, reportId, data, userId) => {
     await assertManagerOwnsReportEvent(staffId, reportId);
-    return reportService.saveDraft(reportId, data, userId);
+    return reportService.saveDraft(reportId, data, userId, MANAGER_REPORT_OPTIONS);
   },
 
   publish: async (staffId, reportId, userId) => {
     await assertManagerOwnsReportEvent(staffId, reportId);
-    return reportService.publish(reportId, userId);
+    return reportService.publish(reportId, userId, MANAGER_REPORT_OPTIONS);
   },
 
   share: async (staffId, reportId, data, userId) => {
     await assertManagerOwnsReportEvent(staffId, reportId);
-    return reportService.share(reportId, data, userId);
+    return reportService.share(reportId, data, userId, MANAGER_REPORT_OPTIONS);
   },
 
   generatePdf: async (staffId, reportId, userId) => {
     await assertManagerOwnsReportEvent(staffId, reportId);
-    return reportPdfService.generate(reportId, userId);
+    return reportPdfService.generate(reportId, userId, MANAGER_REPORT_OPTIONS);
   },
 
   downloadPdf: async (staffId, reportId, userId) => {
     await assertManagerOwnsReportEvent(staffId, reportId);
-    return reportPdfService.download(reportId, userId);
+    return reportPdfService.download(reportId, userId, MANAGER_REPORT_OPTIONS);
   },
 
   deletePdf: async (staffId, reportId, userId) => {
     await assertManagerOwnsReportEvent(staffId, reportId);
-    return reportPdfService.delete(reportId, userId);
+    return reportPdfService.delete(reportId, userId, MANAGER_REPORT_OPTIONS);
   },
 };
 

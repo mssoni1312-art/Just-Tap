@@ -85,6 +85,15 @@ const managerDashboardPaths = {
       successDescription: 'Scoped stats for allocated events only',
     }),
   },
+  '/dashboard/evaluate-income': {
+    get: op('get', [MANAGER_TAG, 'Manager Dashboard'], 'Manager evaluate and income summary', {
+      operationId: 'managerDashboardEvaluateIncome',
+      description:
+        'Returns task counts, task-wise income breakdown, and total income for the authenticated manager. Tasks are `event_tasks` assigned to the manager within their allocated events. Per-task income uses `assign_manager_cost` when the task is completed; total income sums `assign_manager_cost` across all allocated events.',
+      responseSchema: 'ManagerEvaluateIncomeResponse',
+      successDescription: 'Evaluate/income dashboard payload',
+    }),
+  },
 };
 
 const managerEventPaths = {

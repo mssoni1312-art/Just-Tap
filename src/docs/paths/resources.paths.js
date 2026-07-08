@@ -24,6 +24,7 @@ const inquiriesPaths = {
       operationId: 'inquiriesList',
       parameters: paginationParams([
         { name: 'status', in: 'query', schema: { type: 'string', enum: ['pending', 'converted'] } },
+        { name: 'source', in: 'query', schema: { type: 'string', enum: ['admin', 'client'] } },
         { name: 'startDate', in: 'query', schema: { type: 'string', format: 'date' } },
         { name: 'endDate', in: 'query', schema: { type: 'string', format: 'date' } },
       ]),

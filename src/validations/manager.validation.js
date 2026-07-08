@@ -60,7 +60,6 @@ const createManagerEventSchema = Joi.object({
   if (!hasClientId) {
     const missing = [];
     if (!value.clientName) missing.push('clientName');
-    if (!value.clientAddress) missing.push('clientAddress');
     if (!value.clientMobile) missing.push('clientMobile');
     if (!value.reference) missing.push('reference');
     if (missing.length) {

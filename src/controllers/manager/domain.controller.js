@@ -29,6 +29,13 @@ module.exports = {
         'Document uploaded',
         201
       ),
+    video: async (req, res) =>
+      sendSuccess(
+        res,
+        await uploadService.saveUpload(req.user.id, req.file, 'video'),
+        'Video uploaded',
+        201
+      ),
   },
   report: {
     meta: async (_req, res) => sendSuccess(res, managerReportService.getMeta()),

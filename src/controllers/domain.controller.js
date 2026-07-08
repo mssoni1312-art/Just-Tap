@@ -60,6 +60,7 @@ module.exports = {
   upload: {
     image: async (req, res) => sendSuccess(res, await uploadService.saveUpload(req.user.id, req.file, 'image'), 'Image uploaded', 201),
     document: async (req, res) => sendSuccess(res, await uploadService.saveUpload(req.user.id, req.file, 'document'), 'Document uploaded', 201),
+    video: async (req, res) => sendSuccess(res, await uploadService.saveUpload(req.user.id, req.file, 'video'), 'Video uploaded', 201),
   },
   analytics: {
     sales: async (_req, res) => sendSuccess(res, await analyticsService.getSales()),

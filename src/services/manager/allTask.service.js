@@ -23,6 +23,33 @@ const calcProgress = (achieved, target) => {
   return Math.min(100, Math.round((achieved / target) * 100));
 };
 
+const meetsCompletionRequirements = (progress, attachments) => {
+  const amountCollected = Number(progress?.amountCollected) || 0;
+  return amountCollected > 0 && (attachments?.length ?? 0) > 0;
+};
+
+const reopenInvalidCompletedWorkflow = async (eventId, progress, attachments) => {
+  if (progress?.status !== 'completed' || meetsCompletionRequirements(progress, attachments)) {
+    return progress;
+  }
+  return allTaskRepository.setStatus(eventId, 'in_progress');
+};
+
+const ensureEditableWorkflow = async (eventId, progress, attachments, action = 'edit') => {
+  if (progress?.status === 'abandoned') {
+    const message = action === 'attach'
+      ? 'Cannot add attachments to a closed all-tasks workflow'
+      : 'Abandoned all-tasks workflow cannot be edited';
+    throw new AppError(message, 400);
+  }
+
+  let effectiveProgress = await reopenInvalidCompletedWorkflow(eventId, progress, attachments);
+  if (effectiveProgress?.status === 'completed') {
+    effectiveProgress = await allTaskRepository.setStatus(eventId, 'in_progress');
+  }
+  return effectiveProgress;
+};
+
 const formatCurrencyTarget = (amount) => {
   if (amount == null) return null;
   const value = Number(amount);
@@ -140,15 +167,17 @@ const managerAllTaskService = {
       buildTargets(eventRow),
     ]);
 
+    const effectiveProgress = await reopenInvalidCompletedWorkflow(eventId, progress, attachments);
+
     return {
       eventId: String(eventId),
       eventUuid: eventRow.uuid,
-      status: progress.status,
-      tasks: buildTaskModules(targets, progress, reportingTimeRaw),
+      status: effectiveProgress.status,
+      tasks: buildTaskModules(targets, effectiveProgress, reportingTimeRaw),
       attachments,
-      completedAt: progress.completedAt,
-      abandonedAt: progress.abandonedAt,
-      updatedAt: progress.updatedAt,
+      completedAt: effectiveProgress.completedAt,
+      abandonedAt: effectiveProgress.abandonedAt,
+      updatedAt: effectiveProgress.updatedAt,
     };
   },
 
@@ -157,12 +186,8 @@ const managerAllTaskService = {
     await assertManagerOwnsEvent(staffId, eventId);
 
     const progress = await allTaskRepository.findProgressByEventId(eventId);
-    if (progress?.status === 'completed') {
-      throw new AppError('Completed all-tasks workflow cannot be edited', 400);
-    }
-    if (progress?.status === 'abandoned') {
-      throw new AppError('Abandoned all-tasks workflow cannot be edited', 400);
-    }
+    const attachments = await allTaskRepository.listAttachments(eventId);
+    await ensureEditableWorkflow(eventId, progress, attachments);
 
     await allTaskRepository.updateProgress(eventId, data);
     return this.getAllTasks(staffId, eventId);
@@ -219,9 +244,8 @@ const managerAllTaskService = {
     await assertManagerOwnsEvent(staffId, eventId);
 
     const progress = await allTaskRepository.findProgressByEventId(eventId);
-    if (progress?.status === 'completed' || progress?.status === 'abandoned') {
-      throw new AppError('Cannot add attachments to a closed all-tasks workflow', 400);
-    }
+    const attachments = await allTaskRepository.listAttachments(eventId);
+    await ensureEditableWorkflow(eventId, progress, attachments, 'attach');
 
     const upload = await uploadService.saveUpload(
       userId,

@@ -19,6 +19,8 @@ const activityRoutes = require('./activity.routes');
 const reportRoutes = require('./report.routes');
 const feedbackQuestionRoutes = require('./feedbackQuestion.routes');
 const publicRoutes = require('./public.routes');
+const clientFlowRoutes = require('./clientFlow.routes');
+const clientAppRoutes = require('./clientApp.routes');
 
 const router = express.Router();
 
@@ -43,5 +45,7 @@ router.use('/activity', activityRoutes);
 router.use('/report', reportRoutes);
 router.use('/feedback-questions', feedbackQuestionRoutes);
 router.use('/public', publicRoutes);
+router.use('/client-flow', clientFlowRoutes);
+router.use('/', clientAppRoutes);
 
 module.exports = router;

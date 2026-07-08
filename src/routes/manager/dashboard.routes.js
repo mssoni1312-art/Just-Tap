@@ -8,5 +8,6 @@ const dashboardController = require('../../controllers/manager/dashboard.control
 const router = express.Router();
 router.use(authenticate, requireManager, resolveManagerStaff);
 router.get('/home', asyncHandler(dashboardController.home));
+router.get('/evaluate-income', asyncHandler(dashboardController.evaluateIncome));
 
 module.exports = router;

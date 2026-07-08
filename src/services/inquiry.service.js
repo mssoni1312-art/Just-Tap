@@ -10,12 +10,16 @@ const INQUIRY_EXPORT_COLUMNS = [
   { label: 'Ref Number', key: 'refNumber' },
   { label: 'Client Name', key: 'clientName' },
   { label: 'Phone', key: 'clientPhone' },
+  { label: 'Date Type', key: 'dateType' },
   { label: 'Event Date', key: 'date' },
   { label: 'Time Slot', key: 'timeSlot' },
   { label: 'Venue', key: 'venue' },
   { label: 'Function', key: 'functionName' },
   { label: 'Package', key: 'packageName' },
   { label: 'Capacity', key: 'capacity' },
+  { label: 'Total Estimate', key: 'totalEstimate' },
+  { label: 'Source', key: 'source' },
+  { label: 'Selected Days', key: 'selectedDaysCount' },
   { label: 'Status', key: 'status' },
 ];
 
@@ -32,7 +36,54 @@ const inquiryService = {
     const id = await resolveId('inquiries', idOrUuid);
     const inquiry = await inquiryRepository.findById(id);
     if (!inquiry) throw new AppError('Inquiry not found', 404);
-    return inquiryRepository.formatInquiry(inquiry);
+    return inquiryRepository.formatInquiryWithDays(inquiry);
+  },
+
+  async createClientInquiry(data) {
+    const eventDay = data.eventDay;
+    const refNumber = await inquiryRepository.generateRefNumber();
+    const id = await inquiryRepository.createWithDays(
+      {
+        ref_number: refNumber,
+        client_name: data.companyName,
+        client_phone: data.contactNumber,
+        date_type: data.dateType,
+        event_date: eventDay.date,
+        time_slot: eventDay.timeSlot,
+        venue: eventDay.venueName,
+        function_name: eventDay.functionName,
+        capacity: String(eventDay.tabletsCount),
+        total_estimate: data.totalEstimate ?? null,
+        source: 'client',
+      },
+      [{
+        day_number: 1,
+        event_date: eventDay.date,
+        venue_name: eventDay.venueName,
+        function_name: eventDay.functionName,
+        city: eventDay.city,
+        tablets_count: eventDay.tabletsCount,
+        time_slot: eventDay.timeSlot,
+      }]
+    );
+
+    await activityRepository.log({
+      action: 'client_inquiry_created',
+      description: `Client inquiry ${refNumber} submitted`,
+      metadata: { inquiryId: id, source: 'client' },
+    });
+
+    const inquiry = await this.getById(id);
+    return {
+      id: inquiry.id,
+      uuid: inquiry.uuid,
+      refNumber: inquiry.refNumber,
+      status: inquiry.status,
+      dateType: inquiry.dateType,
+      selectedDaysCount: inquiry.selectedDaysCount,
+      totalEstimate: inquiry.totalEstimate,
+      message: 'Your inquiry has been submitted. Our team will contact you shortly.',
+    };
   },
 
   async create(data, userId) {
@@ -41,6 +92,7 @@ const inquiryService = {
       ref_number: refNumber,
       client_name: data.clientName,
       client_phone: data.clientPhone,
+      date_type: 'single',
       event_date: data.eventDate,
       time_slot: data.timeSlot,
       venue: data.venue,
@@ -48,6 +100,7 @@ const inquiryService = {
       package_name: data.packageName,
       package_id: data.packageId,
       capacity: data.capacity,
+      source: 'admin',
     });
     await activityRepository.log({
       userId,
@@ -106,20 +159,27 @@ const inquiryService = {
     const inquiry = await inquiryRepository.findById(id);
     if (!inquiry) throw new AppError('Inquiry not found', 404);
     if (inquiry.status === 'converted') throw new AppError('Inquiry already converted', 400);
+
+    const formatted = await inquiryRepository.formatInquiryWithDays(inquiry);
+    const firstDay = formatted.eventDays[0];
+
     return {
       prefill: {
         inquiryId: inquiry.id,
         clientName: inquiry.client_name,
-        venueName: inquiry.venue,
-        eventFunctionName: inquiry.function_name,
-        inquiryDate: inquiry.event_date,
-        startDate: inquiry.event_date,
-        endDate: inquiry.event_date,
+        venueName: inquiry.venue || firstDay?.venueName,
+        eventFunctionName: inquiry.function_name || firstDay?.functionName,
+        cityName: firstDay?.city,
+        inquiryDate: inquiry.event_date || firstDay?.date,
+        startDate: inquiry.event_date || firstDay?.date,
+        endDate: formatted.eventDays.length
+          ? formatted.eventDays[formatted.eventDays.length - 1].date
+          : inquiry.event_date,
         packageName: inquiry.package_name,
         packageId: inquiry.package_id,
         capacity: inquiry.capacity,
       },
-      inquiry: inquiryRepository.formatInquiry(inquiry),
+      inquiry: formatted,
     };
   },
 
@@ -146,6 +206,7 @@ const inquiryService = {
         ref_number: record.refNumber || record.ref_number || await inquiryRepository.generateRefNumber(),
         client_name: record.clientName || record.client_name,
         client_phone: record.clientPhone || record.client_phone,
+        date_type: 'single',
         event_date: record.eventDate || record.event_date,
         time_slot: record.timeSlot || record.time_slot,
         venue: record.venue,
@@ -153,6 +214,7 @@ const inquiryService = {
         package_name: record.packageName || record.package_name,
         package_id: record.packageId || record.package_id,
         capacity: record.capacity,
+        source: 'admin',
       });
       created.push(id);
     }

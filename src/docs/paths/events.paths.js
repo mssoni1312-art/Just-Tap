@@ -1,5 +1,5 @@
 const {
-  op, jsonBody, idParam, paginationParams, exportParams, importBody, bulkIdsBody,
+  op, jsonBody, idParam, paginationParams, exportParams, importBody, bulkIdsBody, PUBLIC,
 } = require('../helpers');
 
 const eventIdParam = {

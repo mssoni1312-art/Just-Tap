@@ -181,6 +181,37 @@ describe('Manager API integration', { skip: process.env.SKIP_INTEGRATION_TESTS =
     assert.equal(homeRes.body.data.pendingInquiries, undefined);
   });
 
+  it('GET /api/manager/dashboard/evaluate-income returns task and income summary', async (t) => {
+    if (!dbReady) return t.skip();
+
+    const res = await request(app)
+      .get('/api/manager/dashboard/evaluate-income')
+      .set('Authorization', `Bearer ${managerToken}`);
+
+    assert.equal(res.status, 200);
+    assert.equal(res.body.success, true);
+
+    const { manager, summary, income } = res.body.data;
+    assert.ok(manager.id);
+    assert.ok(manager.name);
+    assert.equal(typeof summary.totalTasks, 'number');
+    assert.equal(typeof summary.pendingTasks, 'number');
+    assert.equal(typeof summary.completedTasks, 'number');
+    assert.equal(summary.totalTasks, summary.pendingTasks + summary.completedTasks);
+    assert.ok(Array.isArray(income.tasks));
+    assert.equal(typeof income.totalIncome, 'number');
+
+    for (const task of income.tasks) {
+      assert.ok(task.id);
+      assert.ok(task.name);
+      assert.ok(['Pending Task', 'Complete Task'].includes(task.statusLabel));
+      assert.equal(typeof task.income, 'number');
+      if (task.statusLabel === 'Pending Task') {
+        assert.equal(task.income, 0);
+      }
+    }
+  });
+
   it('GET /api/manager/events lists only allocated events for manager 1', async (t) => {
     if (!dbReady) return t.skip();
 

@@ -101,7 +101,9 @@ async function resolveReportId(reportIdOrUuid) {
   return resolveId('report_master', reportIdOrUuid);
 }
 
-async function assertReportAccess(reportId, userId) {
+async function assertReportAccess(reportId, userId, options = {}) {
+  if (options.skipAccessCheck) return;
+
   const ownerId = await reportRepository.getOwnerId(reportId);
   if (ownerId == null) throw new AppError('Report not found', 404);
   if (String(ownerId) !== String(userId)) {
@@ -184,13 +186,13 @@ function ensurePdfDir() {
 }
 
 const reportPdfService = {
-  async generate(reportIdOrUuid, userId) {
+  async generate(reportIdOrUuid, userId, options = {}) {
     if (!fs.existsSync(REPORT_ROOT)) {
       throw new AppError('Report templates are missing on the server. Rebuild or redeploy the API.', 500);
     }
 
     const reportId = await resolveReportId(reportIdOrUuid);
-    await assertReportAccess(reportId, userId);
+    await assertReportAccess(reportId, userId, options);
 
     const report = await reportRepository.findById(reportId);
     if (!report) throw new AppError('Report not found', 404);
@@ -268,9 +270,9 @@ const reportPdfService = {
     };
   },
 
-  async download(reportIdOrUuid, userId) {
+  async download(reportIdOrUuid, userId, options = {}) {
     const reportId = await resolveReportId(reportIdOrUuid);
-    await assertReportAccess(reportId, userId);
+    await assertReportAccess(reportId, userId, options);
 
     const pdf = await reportPdfRepository.findActiveByReportId(reportId);
     if (!pdf) throw new AppError('PDF not found. Generate the PDF first.', 404);
@@ -288,9 +290,9 @@ const reportPdfService = {
     };
   },
 
-  async delete(reportIdOrUuid, userId) {
+  async delete(reportIdOrUuid, userId, options = {}) {
     const reportId = await resolveReportId(reportIdOrUuid);
-    await assertReportAccess(reportId, userId);
+    await assertReportAccess(reportId, userId, options);
 
     const pdf = await reportPdfRepository.findActiveByReportId(reportId);
     if (!pdf) throw new AppError('PDF not found', 404);
@@ -313,9 +315,9 @@ const reportPdfService = {
     return { reportId: String(reportId), deleted: true };
   },
 
-  async getPdfInfo(reportIdOrUuid, userId) {
+  async getPdfInfo(reportIdOrUuid, userId, options = {}) {
     const reportId = await resolveReportId(reportIdOrUuid);
-    await assertReportAccess(reportId, userId);
+    await assertReportAccess(reportId, userId, options);
 
     const pdf = await reportPdfRepository.findActiveByReportId(reportId);
     if (!pdf) return null;

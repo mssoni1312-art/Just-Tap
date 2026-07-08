@@ -502,6 +502,36 @@ const miscPaths = {
       },
     },
   },
+  '/uploads/videos': {
+    post: {
+      tags: ['Uploads'],
+      summary: 'Upload video',
+      operationId: 'uploadsVideo',
+      security: [{ bearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'multipart/form-data': {
+            schema: {
+              type: 'object',
+              required: ['file'],
+              properties: {
+                file: { type: 'string', format: 'binary', description: 'MP4, MOV, WebM, M4V' },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        201: {
+          description: 'Video uploaded',
+          content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { properties: { data: { $ref: '#/components/schemas/UploadResponse' } } }] } } },
+        },
+        400: { $ref: '#/components/responses/BadRequest' },
+        401: { $ref: '#/components/responses/Unauthorized' },
+      },
+    },
+  },
 };
 
 const teamTypeParam = {

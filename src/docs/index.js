@@ -17,6 +17,8 @@ const {
 } = require('./paths/operations.paths');
 const reportPaths = require('./paths/report.paths');
 const managerPortalPaths = require('./paths/manager.paths');
+const clientFlowPaths = require('./paths/clientFlow.paths');
+const clientAppPaths = require('./paths/clientApp.paths');
 
 const healthPaths = {
   '/health': {
@@ -96,6 +98,8 @@ const adminApiPaths = {
   ...miscPaths,
   ...teamAllocationPaths,
   ...reportPaths,
+  ...clientFlowPaths,
+  ...clientAppPaths,
 };
 
 const allTags = [
@@ -115,6 +119,8 @@ const allTags = [
   { name: 'Function Names', description: 'Function name master data — list dropdown & quick-add for Create Event Function Details step (GET /function-names, POST /function-names)' },
   { name: 'Feedback', description: 'Guest feedback reply and flagging' },
   { name: 'Feedback Questionnaire', description: 'Dynamic feedback questions for admin and guest apps' },
+  { name: 'Client Flow', description: 'Client/guest mobile app — reels, feeds, and public event content' },
+  { name: 'Client App', description: 'Global client app content — our-events, reels, discover experiences, and testimonials' },
   { name: 'Orders', description: 'Order line items and reports' },
   { name: 'Tables', description: 'Table assignments and allocation' },
   { name: 'Activity', description: 'Audit and activity logs' },

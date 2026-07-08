@@ -8,6 +8,8 @@ const menuController = require('../controllers/menu.controller');
 const taskController = require('../controllers/task.controller');
 const feedbackController = require('../controllers/feedback.controller');
 const feedbackQuestionController = require('../controllers/feedbackQuestion.controller');
+const clientDashboardContentController = require('../controllers/clientDashboardContent.controller');
+const { uploadVideo } = require('../config/multer');
 const billingController = require('../controllers/billing.controller');
 const managerCostController = require('../controllers/managerCost.controller');
 const domain = require('../controllers/domain.controller');
@@ -40,6 +42,10 @@ const {
   listFeedbackQuestionsSchema,
   adminEventFeedbackQuestionSchema,
   eventFeedbackQuestionIdParamSchema,
+  createDiscoverExperienceSchema,
+  updateDiscoverExperienceSchema,
+  createTestimonialSchema,
+  updateTestimonialSchema,
   orderTableQuerySchema,
   reportQuerySchema,
   listTasksSchema,
@@ -120,5 +126,72 @@ router.delete(
   asyncHandler(feedbackQuestionController.removeForEvent)
 );
 router.get('/:eventId/feedback-questionnaire/submissions', validate(eventIdParam, 'params'), validate(listFeedbackSubmissionsSchema, 'query'), asyncHandler(feedbackQuestionController.listSubmissions));
+
+// Backward-compatible aliases — eventId is ignored; content is global (same as /discover-experiences and /testimonials)
+router.get(
+  '/:eventId/client-dashboard/discover-experiences',
+  validate(eventIdParam, 'params'),
+  asyncHandler(clientDashboardContentController.listDiscoverExperiences)
+);
+router.post(
+  '/:eventId/client-dashboard/discover-experiences',
+  validate(eventIdParam, 'params'),
+  uploadVideo.single('file'),
+  validate(createDiscoverExperienceSchema),
+  asyncHandler(clientDashboardContentController.createDiscoverExperience)
+);
+router.get(
+  '/:eventId/client-dashboard/discover-experiences/:id',
+  validate(eventIdParam, 'params'),
+  validate(idParamSchema, 'params'),
+  asyncHandler(clientDashboardContentController.getDiscoverExperience)
+);
+router.patch(
+  '/:eventId/client-dashboard/discover-experiences/:id',
+  validate(eventIdParam, 'params'),
+  validate(idParamSchema, 'params'),
+  uploadVideo.single('file'),
+  validate(updateDiscoverExperienceSchema),
+  asyncHandler(clientDashboardContentController.updateDiscoverExperience)
+);
+router.delete(
+  '/:eventId/client-dashboard/discover-experiences/:id',
+  validate(eventIdParam, 'params'),
+  validate(idParamSchema, 'params'),
+  asyncHandler(clientDashboardContentController.removeDiscoverExperience)
+);
+
+router.get(
+  '/:eventId/client-dashboard/testimonials',
+  validate(eventIdParam, 'params'),
+  asyncHandler(clientDashboardContentController.listTestimonials)
+);
+router.post(
+  '/:eventId/client-dashboard/testimonials',
+  validate(eventIdParam, 'params'),
+  uploadVideo.single('file'),
+  validate(createTestimonialSchema),
+  asyncHandler(clientDashboardContentController.createTestimonial)
+);
+router.get(
+  '/:eventId/client-dashboard/testimonials/:id',
+  validate(eventIdParam, 'params'),
+  validate(idParamSchema, 'params'),
+  asyncHandler(clientDashboardContentController.getTestimonial)
+);
+router.patch(
+  '/:eventId/client-dashboard/testimonials/:id',
+  validate(eventIdParam, 'params'),
+  validate(idParamSchema, 'params'),
+  uploadVideo.single('file'),
+  validate(updateTestimonialSchema),
+  asyncHandler(clientDashboardContentController.updateTestimonial)
+);
+router.delete(
+  '/:eventId/client-dashboard/testimonials/:id',
+  validate(eventIdParam, 'params'),
+  validate(idParamSchema, 'params'),
+  asyncHandler(clientDashboardContentController.removeTestimonial)
+);
 
 module.exports = router;
