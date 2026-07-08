@@ -49,14 +49,19 @@ const assertManagerUser = async (identifier) => {
   return { user, staff };
 };
 
+const verifyPassword = async (password, passwordHash) => {
+  if (!passwordHash) return false;
+  try {
+    return await bcrypt.compare(password, passwordHash);
+  } catch {
+    return false;
+  }
+};
+
 const managerAuthService = {
   async login(identifier, password) {
     const { user, staff } = await assertManagerUser(identifier);
-    const [rows] = await require('../../config/database').execute(
-      'SELECT password_hash FROM users WHERE id = ? AND deleted_at IS NULL',
-      [user.id]
-    );
-    const valid = await bcrypt.compare(password, rows[0].password_hash);
+    const valid = await verifyPassword(password, user.password_hash);
     if (!valid) throw new AppError('Invalid credentials', 401);
 
     await userRepository.updateLastLogin(user.id);
