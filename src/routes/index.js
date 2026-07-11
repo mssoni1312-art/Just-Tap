@@ -46,6 +46,9 @@ router.use('/report', reportRoutes);
 router.use('/feedback-questions', feedbackQuestionRoutes);
 router.use('/public', publicRoutes);
 router.use('/client-flow', clientFlowRoutes);
+// Super Admin client-dashboard APIs (Flutter expects /api/v1/admin/*)
+router.use('/admin', clientAppRoutes);
+// Legacy mount without /admin prefix (older clients)
 router.use('/', clientAppRoutes);
 
 module.exports = router;

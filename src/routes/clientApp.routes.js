@@ -12,6 +12,7 @@ const {
   listClientEventTitlesSchema,
   createClientEventTitleSchema,
   createReelSchema,
+  clientFlowReelsListSchema,
   createDiscoverExperienceSchema,
   updateDiscoverExperienceSchema,
   createTestimonialSchema,
@@ -39,11 +40,21 @@ router.delete(
   asyncHandler(clientEventTitleController.remove)
 );
 
+router.get(
+  '/reels',
+  validate(clientFlowReelsListSchema, 'query'),
+  asyncHandler(reelController.list)
+);
 router.post(
   '/reels',
   uploadVideo.single('file'),
   validate(createReelSchema),
   asyncHandler(reelController.create)
+);
+router.delete(
+  '/reels/:id',
+  validate(idParamSchema, 'params'),
+  asyncHandler(reelController.remove)
 );
 
 router.get(

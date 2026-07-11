@@ -332,6 +332,13 @@ const components = {
       type: 'array',
       items: { $ref: '#/components/schemas/EventReel' },
     },
+    PaginatedEventReelList: {
+      type: 'object',
+      properties: {
+        items: { $ref: '#/components/schemas/EventReelList' },
+        pagination: { $ref: '#/components/schemas/PaginationMeta' },
+      },
+    },
     PublicEventReelsResponse: {
       type: 'object',
       properties: {

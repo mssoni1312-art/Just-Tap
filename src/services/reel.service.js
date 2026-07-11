@@ -5,6 +5,14 @@ const { resolveId } = require('../helpers/idResolver');
 const AppError = require('../utils/AppError');
 
 const reelService = {
+  async list(query = {}) {
+    const resolvedQuery = { ...query };
+    if (query.ourEventId) {
+      resolvedQuery.ourEventId = await resolveId('client_event_titles', query.ourEventId);
+    }
+    return reelRepository.list(resolvedQuery);
+  },
+
   async create(file, body, userId) {
     if (!file) throw new AppError('Video file is required', 400);
 
@@ -22,6 +30,15 @@ const reelService = {
       guestCount: body.guestCount,
       uploadedBy: userId,
     });
+  },
+
+  async remove(idOrUuid) {
+    const id = await resolveId('event_reels', idOrUuid);
+    const row = await reelRepository.findById(id);
+    if (!row) throw new AppError('Reel not found', 404);
+
+    await reelRepository.softDelete(id);
+    return { deleted: true };
   },
 };
 

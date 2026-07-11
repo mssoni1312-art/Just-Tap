@@ -54,6 +54,23 @@ const clientAppPaths = {
     }),
   },
   '/reels': {
+    get: op('get', ['Client App'], 'List reels', {
+      operationId: 'reelsList',
+      description:
+        'Paginated admin list of global reels shown in the client app. Filter by Our Events category or search name/venue.',
+      parameters: [
+        { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
+        { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
+        {
+          name: 'ourEventId',
+          in: 'query',
+          schema: { oneOf: [{ type: 'integer' }, { type: 'string', format: 'uuid' }] },
+          description: 'Filter by Our Events category',
+        },
+        { name: 'search', in: 'query', schema: { type: 'string' }, description: 'Search name or venue' },
+      ],
+      responseSchema: 'PaginatedEventReelList',
+    }),
     post: op('post', ['Client App'], 'Upload reel/video', {
       operationId: 'reelsCreate',
       description: 'Saves a global reel with video file, our-event category, name, venue, and guest count for the client app.',
@@ -68,6 +85,55 @@ const clientAppPaths = {
       responseSchema: 'EventReel',
       created: true,
       successDescription: 'Reel saved',
+    }),
+  },
+  '/reels/{id}': {
+    delete: op('delete', ['Client App'], 'Delete reel', {
+      operationId: 'reelsDelete',
+      description: 'Soft-deletes a reel so it no longer appears in the client app feed.',
+      parameters: [idParam()],
+      successDescription: 'Reel deleted',
+    }),
+  },
+  '/admin/reels': {
+    get: op('get', ['Client App'], 'List reels (admin path)', {
+      operationId: 'adminReelsList',
+      description:
+        'Alias of GET /reels under `/admin` for Flutter Super Admin. Same auth and query params.',
+      parameters: [
+        { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
+        { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
+        {
+          name: 'ourEventId',
+          in: 'query',
+          schema: { oneOf: [{ type: 'integer' }, { type: 'string', format: 'uuid' }] },
+        },
+        { name: 'search', in: 'query', schema: { type: 'string' } },
+      ],
+      responseSchema: 'PaginatedEventReelList',
+    }),
+    post: op('post', ['Client App'], 'Upload reel/video (admin path)', {
+      operationId: 'adminReelsCreate',
+      description: 'Alias of POST /reels under `/admin` for Flutter Super Admin.',
+      requestBody: {
+        required: true,
+        content: {
+          'multipart/form-data': {
+            schema: { $ref: '#/components/schemas/CreateReelRequest' },
+          },
+        },
+      },
+      responseSchema: 'EventReel',
+      created: true,
+      successDescription: 'Reel saved',
+    }),
+  },
+  '/admin/reels/{id}': {
+    delete: op('delete', ['Client App'], 'Delete reel (admin path)', {
+      operationId: 'adminReelsDelete',
+      description: 'Alias of DELETE /reels/{id} under `/admin` for Flutter Super Admin.',
+      parameters: [idParam()],
+      successDescription: 'Reel deleted',
     }),
   },
   '/discover-experiences': {
