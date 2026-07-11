@@ -7,6 +7,7 @@ const swaggerUi = require('swagger-ui-express');
 const {
   adminSwaggerSpec,
   managerSwaggerSpec,
+  clientSwaggerSpec,
   combinedSwaggerSpec,
 } = require('./config/swagger');
 const routes = require('./routes');
@@ -102,6 +103,41 @@ app.use('/api/manager/docs', swaggerUi.serve);
 app.get('/api/manager/docs', swaggerUi.setup(null, managerSwaggerSetup));
 app.get('/api/manager/docs/', swaggerUi.setup(null, managerSwaggerSetup));
 
+// Client Swagger — must be registered BEFORE app.use('/api/client', clientRouter)
+app.use(
+  '/api/client/docs',
+  swaggerUi.serveFiles(clientSwaggerSpec, {
+    explorer: true,
+    customCss: '.swagger-ui .topbar { display: none }',
+    swaggerOptions: {
+      persistAuthorization: true,
+      docExpansion: 'list',
+      filter: true,
+      showRequestDuration: true,
+      tryItOutEnabled: true,
+      displayOperationId: true,
+    },
+  }),
+  swaggerUi.setup(clientSwaggerSpec, {
+    explorer: true,
+    customSiteTitle: 'Just Tap Client API',
+    customCss: '.swagger-ui .topbar { display: none }',
+    swaggerOptions: {
+      persistAuthorization: true,
+      docExpansion: 'list',
+      filter: true,
+      showRequestDuration: true,
+      tryItOutEnabled: true,
+      displayOperationId: true,
+    },
+  })
+);
+app.get('/api/client/docs.json', (_req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.json(clientSwaggerSpec);
+});
+app.get('/api/client/docs', (_req, res) => res.redirect(301, '/api/client/docs/'));
+
 app.get('/openapi.json', (_req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.json(combinedSwaggerSpec);
@@ -110,6 +146,10 @@ app.get('/openapi.json', (_req, res) => {
 app.use('/api/v1', routes);
 app.use('/api/manager', managerRouter);
 app.use('/api/v1/manager', managerRouter);
+
+const clientRouter = require('./routes/client');
+app.use('/api/client', clientRouter);
+app.use('/api/v1/client', clientRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ success: false, message: 'Route not found', errors: [] });

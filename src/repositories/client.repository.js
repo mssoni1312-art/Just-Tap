@@ -75,6 +75,21 @@ const clientRepository = {
     );
     return result.insertId;
   },
+
+  async findByUserId(userId) {
+    const [rows] = await pool.execute(
+      'SELECT * FROM clients WHERE user_id = ? AND deleted_at IS NULL LIMIT 1',
+      [userId]
+    );
+    return rows[0] || null;
+  },
+
+  async linkUserId(clientId, userId) {
+    await pool.execute(
+      'UPDATE clients SET user_id = ?, updated_at = NOW() WHERE id = ? AND deleted_at IS NULL',
+      [userId, clientId]
+    );
+  },
 };
 
 module.exports = clientRepository;

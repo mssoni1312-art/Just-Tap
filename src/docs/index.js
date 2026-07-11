@@ -19,6 +19,7 @@ const reportPaths = require('./paths/report.paths');
 const managerPortalPaths = require('./paths/manager.paths');
 const clientFlowPaths = require('./paths/clientFlow.paths');
 const clientAppPaths = require('./paths/clientApp.paths');
+const clientPortalPaths = require('./paths/client.paths');
 
 const healthPaths = {
   '/health': {
@@ -120,6 +121,9 @@ const allTags = [
   { name: 'Feedback', description: 'Guest feedback reply and flagging' },
   { name: 'Feedback Questionnaire', description: 'Dynamic feedback questions for admin and guest apps' },
   { name: 'Client Flow', description: 'Client/guest mobile app — reels, feeds, and public event content' },
+  { name: 'Client', description: 'Just Tap Client mobile app — authentication and inquiries' },
+  { name: 'Client Auth', description: 'Client app login and registration' },
+  { name: 'Client Inquiries', description: 'Client app service inquiry history' },
   { name: 'Client App', description: 'Global client app content — our-events, reels, discover experiences, and testimonials' },
   { name: 'Orders', description: 'Order line items and reports' },
   { name: 'Tables', description: 'Table assignments and allocation' },
@@ -143,11 +147,20 @@ const allTags = [
 ];
 
 const isManagerPortalTag = (name) => name === 'Manager' || name.startsWith('Manager ');
+const isClientPortalTag = (name) => ['Client', 'Client Auth', 'Client Inquiries'].includes(name);
 
 const prefixManagerApiPaths = (paths) => {
   const prefixed = {};
   for (const [route, definition] of Object.entries(paths)) {
     prefixed[`/api/manager${route}`] = definition;
+  }
+  return prefixed;
+};
+
+const prefixClientApiPaths = (paths) => {
+  const prefixed = {};
+  for (const [route, definition] of Object.entries(paths)) {
+    prefixed[`/api/client${route}`] = definition;
   }
   return prefixed;
 };
@@ -180,6 +193,9 @@ const buildAdminOpenApiSpec = () => ({
       '',
       '## Manager API docs',
       'Manager portal has a separate Swagger UI: `/api/manager/docs`',
+      '',
+      '## Client API docs',
+      'Client app has a separate Swagger UI: `/api/client/docs`',
     ].join('\n'),
     contact: { name: 'Just Tap API Support', email: 'admin@justtap.com' },
     license: { name: 'Proprietary' },
@@ -188,7 +204,7 @@ const buildAdminOpenApiSpec = () => ({
     { url: '/api/v1', description: 'Super Admin API (relative to host)' },
     { url: 'http://localhost:3000/api/v1', description: 'Local development' },
   ],
-  tags: allTags.filter((tag) => !isManagerPortalTag(tag.name)),
+  tags: allTags.filter((tag) => !isManagerPortalTag(tag.name) && !isClientPortalTag(tag.name)),
   paths: {
     ...healthPaths,
     ...adminApiPaths,
@@ -231,12 +247,49 @@ const buildManagerOpenApiSpec = () => ({
   security: [{ bearerAuth: [] }],
 });
 
+const buildClientOpenApiSpec = () => ({
+  openapi: '3.0.3',
+  info: {
+    title: 'Just Tap Client API',
+    version: '1.0.0',
+    description: [
+      'REST API for the **Just Tap Client** mobile application.',
+      '',
+      '## Authentication',
+      '1. Register via `POST /api/client/auth/register` or login via `POST /api/client/auth/login`.',
+      '2. Or verify email via `POST /api/client/auth/otp/send` then `POST /api/client/auth/otp/verify`.',
+      '3. Copy the `token` from the response.',
+      '4. Add header on protected routes: `Authorization: Bearer <token>`.',
+      '',
+      '## Inquiries',
+      '- `GET /api/client/inquiries` — list service inquiries for the logged-in client',
+      '',
+      '## Public client content',
+      'Browse feeds and submit inquiries without login via `/api/v1/client-flow/*` (see Super Admin docs).',
+      '',
+      '## Other API docs',
+      '- Super Admin: `/api/docs`',
+      '- Manager: `/api/manager/docs`',
+    ].join('\n'),
+    contact: { name: 'Just Tap API Support', email: 'admin@justtap.com' },
+    license: { name: 'Proprietary' },
+  },
+  servers: [
+    { url: 'http://localhost:3000', description: 'Local development' },
+    { url: '/', description: 'Current host' },
+  ],
+  tags: allTags.filter((tag) => isClientPortalTag(tag.name)),
+  paths: prefixClientApiPaths(clientPortalPaths),
+  components,
+  security: [{ bearerAuth: [] }],
+});
+
 const buildOpenApiSpec = () => ({
   openapi: '3.0.3',
   info: {
     title: 'Just Tap API (Combined)',
     version: '1.0.0',
-    description: 'Combined OpenAPI spec. Use `/api/docs` for Admin or `/api/manager/docs` for Manager.',
+    description: 'Combined OpenAPI spec. Use `/api/docs` (Admin), `/api/manager/docs` (Manager), or `/api/client/docs` (Client).',
     contact: { name: 'Just Tap API Support', email: 'admin@justtap.com' },
     license: { name: 'Proprietary' },
   },
@@ -245,12 +298,15 @@ const buildOpenApiSpec = () => ({
     { url: 'http://localhost:3000/api/v1', description: 'Super Admin local development' },
     { url: '/api/manager', description: 'Manager API (relative to host)' },
     { url: 'http://localhost:3000/api/manager', description: 'Manager local development' },
+    { url: '/api/client', description: 'Client API (relative to host)' },
+    { url: 'http://localhost:3000/api/client', description: 'Client local development' },
   ],
   tags: allTags,
   paths: {
     ...healthPaths,
     ...adminApiPaths,
     ...managerPortalPaths,
+    ...prefixClientApiPaths(clientPortalPaths),
   },
   components,
   security: [{ bearerAuth: [] }],
@@ -259,4 +315,5 @@ const buildOpenApiSpec = () => ({
 module.exports = buildOpenApiSpec;
 module.exports.buildAdminOpenApiSpec = buildAdminOpenApiSpec;
 module.exports.buildManagerOpenApiSpec = buildManagerOpenApiSpec;
+module.exports.buildClientOpenApiSpec = buildClientOpenApiSpec;
 module.exports.buildOpenApiSpec = buildOpenApiSpec;

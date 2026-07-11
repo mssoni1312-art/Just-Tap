@@ -20,6 +20,7 @@ async function start() {
     logger.info(`Just Tap API running on ${HOST}:${PORT}`);
     logger.info(`Admin Swagger: http://localhost:${PORT}/api/docs`);
     logger.info(`Manager Swagger: http://localhost:${PORT}/api/manager/docs`);
+    logger.info(`Client Swagger: http://localhost:${PORT}/api/client/docs`);
     logger.info(`Health: http://localhost:${PORT}/health`);
     logger.info(`Readiness: http://localhost:${PORT}/health/ready`);
     logger.info(`Liveness: http://localhost:${PORT}/health/live`);

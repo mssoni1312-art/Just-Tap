@@ -39,7 +39,11 @@ const inquiryService = {
     return inquiryRepository.formatInquiryWithDays(inquiry);
   },
 
-  async createClientInquiry(data) {
+  async createClientInquiry(data, clientId) {
+    if (!clientId) {
+      throw new AppError('Client authentication required', 401);
+    }
+
     const eventDay = data.eventDay;
     const refNumber = await inquiryRepository.generateRefNumber();
     const id = await inquiryRepository.createWithDays(
@@ -47,6 +51,7 @@ const inquiryService = {
         ref_number: refNumber,
         client_name: data.companyName,
         client_phone: data.contactNumber,
+        client_id: clientId,
         date_type: data.dateType,
         event_date: eventDay.date,
         time_slot: eventDay.timeSlot,
@@ -78,6 +83,7 @@ const inquiryService = {
       id: inquiry.id,
       uuid: inquiry.uuid,
       refNumber: inquiry.refNumber,
+      clientId,
       status: inquiry.status,
       dateType: inquiry.dateType,
       selectedDaysCount: inquiry.selectedDaysCount,

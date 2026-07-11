@@ -16,6 +16,7 @@ const formatInquiry = (row, eventDays = []) => ({
   id: String(row.id),
   uuid: row.uuid,
   refNumber: row.ref_number,
+  clientId: row.client_id != null ? Number(row.client_id) : null,
   clientName: row.client_name,
   clientPhone: row.client_phone,
   dateType: row.date_type || 'single',
@@ -60,6 +61,23 @@ const buildInquiryWhere = (query) => {
     conditions.push('event_date <= ?');
     params.push(query.endDate);
   }
+  return { where: conditions.join(' AND '), params };
+};
+
+const buildClientInquiryWhere = (clientId, query) => {
+  const conditions = ['deleted_at IS NULL', "source = 'client'", 'client_id = ?'];
+  const params = [clientId];
+
+  if (query.status) {
+    conditions.push('status = ?');
+    params.push(query.status);
+  }
+  if (query.search) {
+    conditions.push('(client_name LIKE ? OR ref_number LIKE ? OR venue LIKE ?)');
+    const s = `%${query.search}%`;
+    params.push(s, s, s);
+  }
+
   return { where: conditions.join(' AND '), params };
 };
 
@@ -135,6 +153,26 @@ const inquiryRepository = {
     );
   },
 
+  async findAllForClient(clientId, query) {
+    const { page, limit, offset, sortOrder } = parsePagination(query);
+    const sortBy = sanitizeSortBy('inquiries', query.sortBy || 'created_at');
+    const { where, params } = buildClientInquiryWhere(clientId, query);
+
+    const [countRows] = await pool.execute(`SELECT COUNT(*) AS total FROM inquiries WHERE ${where}`, params);
+    const [rows] = await pool.execute(
+      `SELECT * FROM inquiries WHERE ${where} ORDER BY ${sortBy} ${sortOrder} LIMIT ${limit} OFFSET ${offset}`,
+      params
+    );
+    const inquiryIds = rows.map((row) => row.id);
+    const daysByInquiryId = await this.findDaysByInquiryIds(inquiryIds);
+    return buildPaginatedResponse(
+      rows.map((row) => formatInquiry(row, daysByInquiryId.get(row.id) || [])),
+      countRows[0].total,
+      page,
+      limit
+    );
+  },
+
   async findAllForExport(query) {
     const { where, params } = buildInquiryWhere(query);
     const sortBy = sanitizeSortBy('inquiries', query.sortBy || 'created_at');
@@ -159,13 +197,14 @@ const inquiryRepository = {
   async create(data) {
     const [result] = await pool.execute(
       `INSERT INTO inquiries (
-        ref_number, client_name, client_phone, date_type, event_date, time_slot, venue,
+        ref_number, client_name, client_phone, client_id, date_type, event_date, time_slot, venue,
         function_name, package_name, package_id, capacity, total_estimate, source, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
       [
         data.ref_number,
         data.client_name,
         data.client_phone || null,
+        data.client_id || null,
         data.date_type || 'single',
         data.event_date || null,
         data.time_slot || null,
@@ -188,13 +227,14 @@ const inquiryRepository = {
 
       const [result] = await conn.execute(
         `INSERT INTO inquiries (
-          ref_number, client_name, client_phone, date_type, event_date, time_slot, venue,
+          ref_number, client_name, client_phone, client_id, date_type, event_date, time_slot, venue,
           function_name, package_name, package_id, capacity, total_estimate, source, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
         [
           inquiryData.ref_number,
           inquiryData.client_name,
           inquiryData.client_phone || null,
+          inquiryData.client_id || null,
           inquiryData.date_type,
           inquiryData.event_date || null,
           inquiryData.time_slot || null,

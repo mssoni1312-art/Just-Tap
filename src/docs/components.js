@@ -120,6 +120,17 @@ const components = {
         password: { type: 'string', minLength: 6, example: 'admin123' },
       },
     },
+    RegisterClientRequest: {
+      type: 'object',
+      required: ['email', 'password', 'name'],
+      properties: {
+        email: { type: 'string', format: 'email', example: 'client@example.com' },
+        password: { type: 'string', minLength: 6, example: 'client123' },
+        name: { type: 'string', example: 'Acme Events' },
+        phone: { type: 'string', example: '+919876543210' },
+        cityName: { type: 'string', example: 'Mumbai' },
+      },
+    },
     LoginResponse: {
       type: 'object',
       properties: {
@@ -145,6 +156,32 @@ const components = {
       properties: {
         identifier: { type: 'string' },
         code: { type: 'string', pattern: '^\\d{6}$', example: '123456' },
+      },
+    },
+    ClientOtpEmailSendRequest: {
+      type: 'object',
+      required: ['email'],
+      properties: {
+        email: { type: 'string', format: 'email', example: 'client@example.com' },
+      },
+    },
+    ClientOtpEmailVerifyRequest: {
+      type: 'object',
+      required: ['email', 'code'],
+      properties: {
+        email: { type: 'string', format: 'email', example: 'client@example.com' },
+        code: { type: 'string', pattern: '^\\d{6}$', example: '123456' },
+      },
+    },
+    ClientOtpEmailVerifyResponse: {
+      type: 'object',
+      properties: {
+        emailVerified: { type: 'boolean', example: true },
+        email: { type: 'string', format: 'email' },
+        message: { type: 'string' },
+        token: { type: 'string', description: 'Present when client account already exists' },
+        refreshToken: { type: 'string' },
+        user: { $ref: '#/components/schemas/User' },
       },
     },
     ForgotPasswordRequest: {
@@ -962,6 +999,7 @@ const components = {
         id: { type: 'string' },
         uuid: { type: 'string', format: 'uuid' },
         refNumber: { type: 'string' },
+        clientId: { type: 'integer', description: 'Linked client ID from authenticated session' },
         status: { type: 'string', enum: ['pending', 'converted'] },
         dateType: { type: 'string', enum: ['single', 'multiple'] },
         selectedDaysCount: { type: 'integer' },

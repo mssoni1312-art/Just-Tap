@@ -1,8 +1,49 @@
-const { op, idParam, PUBLIC } = require('../helpers');
+const { op, idParam, PUBLIC, AUTH, jsonBody } = require('../helpers');
 
 const CLIENT_FLOW_TAG = 'Client Flow';
 
 const clientFlowPaths = {
+  '/client-flow/auth/signup': {
+    post: op('post', [CLIENT_FLOW_TAG], 'Client sign up', {
+      operationId: 'clientFlowAuthSignup',
+      security: PUBLIC,
+      description: 'Sign up for the **Client app**. Creates user account and client profile.',
+      requestBody: jsonBody('RegisterClientRequest', true),
+      responseSchema: 'LoginResponse',
+      successStatus: 201,
+      successDescription: 'Sign up successful',
+    }),
+  },
+  '/client-flow/auth/login': {
+    post: op('post', [CLIENT_FLOW_TAG], 'Client login', {
+      operationId: 'clientFlowAuthLogin',
+      security: PUBLIC,
+      description: 'Login for the **Client app** with email or phone and password.',
+      requestBody: jsonBody('LoginRequest', true),
+      responseSchema: 'LoginResponse',
+      successDescription: 'Login successful',
+    }),
+  },
+  '/client-flow/auth/otp/send': {
+    post: op('post', [CLIENT_FLOW_TAG], 'Send client email OTP', {
+      operationId: 'clientFlowAuthOtpSend',
+      security: PUBLIC,
+      description: 'Send a 6-digit OTP to the client email for verification.',
+      requestBody: jsonBody('ClientOtpEmailSendRequest', true),
+      responseSchema: 'SuccessResponse',
+      successDescription: 'OTP sent to email',
+    }),
+  },
+  '/client-flow/auth/otp/verify': {
+    post: op('post', [CLIENT_FLOW_TAG], 'Verify client email OTP', {
+      operationId: 'clientFlowAuthOtpVerify',
+      security: PUBLIC,
+      description: 'Confirm the OTP sent to the client email.',
+      requestBody: jsonBody('ClientOtpEmailVerifyRequest', true),
+      responseSchema: 'ClientOtpEmailVerifyResponse',
+      successDescription: 'Email verified',
+    }),
+  },
   '/client-flow/reels': {
     get: op('get', [CLIENT_FLOW_TAG], 'List reels for client app', {
       operationId: 'clientFlowReelsList',
@@ -65,11 +106,26 @@ const clientFlowPaths = {
     }),
   },
   '/client-flow/inquiries': {
+    get: op('get', [CLIENT_FLOW_TAG], 'List client inquiries', {
+      operationId: 'clientFlowInquiriesList',
+      security: AUTH,
+      description:
+        'Returns paginated service inquiries for the **logged-in client only**, filtered by `client_id`. Requires client JWT from `/client-flow/auth/login`.',
+      parameters: [
+        { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
+        { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
+        { name: 'status', in: 'query', schema: { type: 'string', enum: ['pending', 'converted'] } },
+        { name: 'search', in: 'query', schema: { type: 'string' } },
+        { name: 'sortBy', in: 'query', schema: { type: 'string', example: 'created_at' } },
+        { name: 'sortOrder', in: 'query', schema: { type: 'string', enum: ['asc', 'desc'] } },
+      ],
+      responseSchema: 'PaginatedList',
+    }),
     post: op('post', [CLIENT_FLOW_TAG], 'Submit service inquiry from client app', {
       operationId: 'clientFlowInquiryCreate',
-      security: PUBLIC,
+      security: AUTH,
       description:
-        'Public endpoint for the **Client app Service Request** form. Each submission includes one event day (`eventDay`). Day number is always stored as 1 on the server.',
+        'Submit a service inquiry for the **logged-in client**. Inquiry is always saved with the authenticated `client_id`. Requires client JWT.',
       requestSchema: 'CreateClientInquiryRequest',
       responseSchema: 'ClientInquiryCreateResponse',
       successStatus: 201,

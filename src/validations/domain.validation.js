@@ -25,6 +25,10 @@ const createClientInquirySchema = Joi.object({
   eventDay: clientInquiryDaySchema.required(),
 });
 
+const listClientInquiriesSchema = paginationQuery.keys({
+  status: Joi.string().valid('pending', 'converted'),
+});
+
 const createInquirySchema = Joi.object({
   refNumber: Joi.string(),
   clientName: Joi.string().required(),
@@ -607,4 +611,5 @@ module.exports = {
   createReelSchema,
   clientFlowReelsListSchema,
   createClientInquirySchema,
+  listClientInquiriesSchema,
 };
