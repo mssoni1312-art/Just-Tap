@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { parsePagination, buildPaginatedResponse } = require('../helpers/pagination');
 
 const formatRow = (row) => ({
   id: row.id,
@@ -15,6 +16,25 @@ const formatRow = (row) => ({
   updatedAt: row.updated_at,
 });
 
+const buildListByTypeQuery = (contentType, query = {}) => {
+  const { page, limit, offset } = parsePagination(query);
+  const conditions = ['content_type = ?', 'deleted_at IS NULL'];
+  const params = [contentType];
+
+  if (query.search) {
+    if (contentType === 'testimonial') {
+      conditions.push('(name LIKE ? OR description LIKE ?)');
+      const term = `%${query.search}%`;
+      params.push(term, term);
+    } else {
+      conditions.push('description LIKE ?');
+      params.push(`%${query.search}%`);
+    }
+  }
+
+  return { page, limit, offset, where: conditions.join(' AND '), params };
+};
+
 const clientDashboardContentRepository = {
   async listByType(contentType) {
     const [rows] = await pool.execute(
@@ -24,6 +44,24 @@ const clientDashboardContentRepository = {
       [contentType]
     );
     return rows.map(formatRow);
+  },
+
+  async listByTypePaginated(contentType, query = {}) {
+    const { page, limit, offset, where, params } = buildListByTypeQuery(contentType, query);
+    const [countRows] = await pool.execute(
+      `SELECT COUNT(*) AS total FROM client_dashboard_content WHERE ${where}`,
+      params
+    );
+
+    const [rows] = await pool.execute(
+      `SELECT * FROM client_dashboard_content
+       WHERE ${where}
+       ORDER BY sort_order ASC, created_at DESC
+       LIMIT ${limit} OFFSET ${offset}`,
+      params
+    );
+
+    return buildPaginatedResponse(rows.map(formatRow), countRows[0].total, page, limit);
   },
 
   async findById(id) {

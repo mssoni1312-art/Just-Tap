@@ -18,12 +18,15 @@ const assertContent = async (idOrUuid, expectedType) => {
 };
 
 const clientDashboardContentService = {
-  async listDiscoverExperiences() {
-    return clientDashboardContentRepository.listByType(CONTENT_TYPES.DISCOVER_EXPERIENCE);
+  async listDiscoverExperiences(query = {}) {
+    return clientDashboardContentRepository.listByTypePaginated(
+      CONTENT_TYPES.DISCOVER_EXPERIENCE,
+      query
+    );
   },
 
-  async listTestimonials() {
-    return clientDashboardContentRepository.listByType(CONTENT_TYPES.TESTIMONIAL);
+  async listTestimonials(query = {}) {
+    return clientDashboardContentRepository.listByTypePaginated(CONTENT_TYPES.TESTIMONIAL, query);
   },
 
   async getDiscoverExperience(idOrUuid) {
@@ -34,6 +37,17 @@ const clientDashboardContentService = {
   async getTestimonial(idOrUuid) {
     const { row } = await assertContent(idOrUuid, CONTENT_TYPES.TESTIMONIAL);
     return row;
+  },
+
+  async create(file, body, userId) {
+    const contentType = body.contentType;
+    if (contentType === CONTENT_TYPES.DISCOVER_EXPERIENCE) {
+      return this.createDiscoverExperience(file, body, userId);
+    }
+    if (contentType === CONTENT_TYPES.TESTIMONIAL) {
+      return this.createTestimonial(file, body, userId);
+    }
+    throw new AppError('contentType must be discover_experience or testimonial', 400);
   },
 
   async createDiscoverExperience(file, body, userId) {

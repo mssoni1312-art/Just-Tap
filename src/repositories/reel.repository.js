@@ -32,27 +32,49 @@ const reelFrom = `event_reels er
   LEFT JOIN client_event_titles cet
     ON cet.id = er.client_event_title_id AND cet.deleted_at IS NULL`;
 
+const buildListQuery = (query = {}) => {
+  const { page, limit, offset } = parsePagination(query);
+  const conditions = ['er.deleted_at IS NULL'];
+  const params = [];
+
+  if (query.ourEventId) {
+    conditions.push('er.client_event_title_id = ?');
+    params.push(query.ourEventId);
+  }
+  if (query.search) {
+    conditions.push('(er.name LIKE ? OR er.venue_name LIKE ?)');
+    const term = `%${query.search}%`;
+    params.push(term, term);
+  }
+
+  return { page, limit, offset, where: conditions.join(' AND '), params };
+};
+
 const reelRepository = {
-  async listForClientFeed(query = {}) {
-    const { page, limit, offset } = parsePagination(query);
-    const conditions = ['er.deleted_at IS NULL'];
-    const params = [];
-
-    if (query.ourEventId) {
-      conditions.push('er.client_event_title_id = ?');
-      params.push(query.ourEventId);
-    }
-    if (query.search) {
-      conditions.push('(er.name LIKE ? OR er.venue_name LIKE ?)');
-      const term = `%${query.search}%`;
-      params.push(term, term);
-    }
-
-    const where = conditions.join(' AND ');
-    const countParams = [...params];
+  async list(query = {}) {
+    const { page, limit, offset, where, params } = buildListQuery(query);
     const [countRows] = await pool.execute(
       `SELECT COUNT(*) AS total FROM event_reels er WHERE ${where}`,
-      countParams
+      params
+    );
+
+    const [rows] = await pool.execute(
+      `SELECT ${reelSelect}
+       FROM ${reelFrom}
+       WHERE ${where}
+       ORDER BY er.created_at DESC
+       LIMIT ${limit} OFFSET ${offset}`,
+      params
+    );
+
+    return buildPaginatedResponse(rows.map(formatReelRow), countRows[0].total, page, limit);
+  },
+
+  async listForClientFeed(query = {}) {
+    const { page, limit, offset, where, params } = buildListQuery(query);
+    const [countRows] = await pool.execute(
+      `SELECT COUNT(*) AS total FROM event_reels er WHERE ${where}`,
+      params
     );
 
     const [rows] = await pool.execute(

@@ -369,6 +369,13 @@ const components = {
       type: 'array',
       items: { $ref: '#/components/schemas/EventReel' },
     },
+    PaginatedEventReelList: {
+      type: 'object',
+      properties: {
+        items: { $ref: '#/components/schemas/EventReelList' },
+        pagination: { $ref: '#/components/schemas/PaginationMeta' },
+      },
+    },
     PublicEventReelsResponse: {
       type: 'object',
       properties: {
@@ -461,7 +468,7 @@ const components = {
       properties: {
         ourEventId: {
           oneOf: [{ type: 'integer' }, { type: 'string', format: 'uuid' }],
-          description: 'Selected Our Events category (from GET /our-events?forSelect=true)',
+          description: 'Selected Our Events category (from GET /admin/our-events?forSelect=true)',
           example: 1,
         },
         file: { type: 'string', format: 'binary', description: 'Video file (MP4, MOV, WebM)' },
@@ -495,6 +502,13 @@ const components = {
       type: 'array',
       items: { $ref: '#/components/schemas/DiscoverExperience' },
     },
+    PaginatedDiscoverExperienceList: {
+      type: 'object',
+      properties: {
+        items: { $ref: '#/components/schemas/DiscoverExperienceList' },
+        pagination: { $ref: '#/components/schemas/PaginationMeta' },
+      },
+    },
     CreateDiscoverExperienceRequest: {
       type: 'object',
       required: ['file', 'description'],
@@ -502,6 +516,36 @@ const components = {
         file: { type: 'string', format: 'binary', description: 'Video file (MP4, MOV, WebM)' },
         description: { type: 'string', example: 'Experience our premium catering service' },
         sortOrder: { type: 'integer', minimum: 0, default: 0 },
+      },
+    },
+    CreateClientDashboardContentRequest: {
+      type: 'object',
+      required: ['contentType', 'description'],
+      properties: {
+        contentType: {
+          type: 'string',
+          enum: ['discover_experience', 'testimonial'],
+          description: 'Which Client Dashboard item to create',
+        },
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Required for discover_experience; optional for testimonial',
+        },
+        description: { type: 'string', example: 'Amazing food and service!' },
+        sortOrder: { type: 'integer', minimum: 0, default: 0 },
+        name: {
+          type: 'string',
+          example: 'Priya Sharma',
+          description: 'Required when contentType=testimonial',
+        },
+        rating: {
+          type: 'integer',
+          minimum: 1,
+          maximum: 5,
+          example: 5,
+          description: 'Required when contentType=testimonial',
+        },
       },
     },
     UpdateDiscoverExperienceRequest: {
@@ -530,6 +574,13 @@ const components = {
     TestimonialList: {
       type: 'array',
       items: { $ref: '#/components/schemas/Testimonial' },
+    },
+    PaginatedTestimonialList: {
+      type: 'object',
+      properties: {
+        items: { $ref: '#/components/schemas/TestimonialList' },
+        pagination: { $ref: '#/components/schemas/PaginationMeta' },
+      },
     },
     CreateTestimonialRequest: {
       type: 'object',

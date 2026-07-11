@@ -5818,6 +5818,38 @@
           }
         }
       },
+      "RegisterClientRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password",
+          "name"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "client@example.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 6,
+            "example": "client123"
+          },
+          "name": {
+            "type": "string",
+            "example": "Acme Events"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+919876543210"
+          },
+          "cityName": {
+            "type": "string",
+            "example": "Mumbai"
+          }
+        }
+      },
       "LoginResponse": {
         "type": "object",
         "properties": {
@@ -5873,6 +5905,64 @@
             "type": "string",
             "pattern": "^\\d{6}$",
             "example": "123456"
+          }
+        }
+      },
+      "ClientOtpEmailSendRequest": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "client@example.com"
+          }
+        }
+      },
+      "ClientOtpEmailVerifyRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "code"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "client@example.com"
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^\\d{6}$",
+            "example": "123456"
+          }
+        }
+      },
+      "ClientOtpEmailVerifyResponse": {
+        "type": "object",
+        "properties": {
+          "emailVerified": {
+            "type": "boolean",
+            "example": true
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "message": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string",
+            "description": "Present when client account already exists"
+          },
+          "refreshToken": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
           }
         }
       },
@@ -6351,6 +6441,17 @@
           "$ref": "#/components/schemas/EventReel"
         }
       },
+      "PaginatedEventReelList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "$ref": "#/components/schemas/EventReelList"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        }
+      },
       "PublicEventReelsResponse": {
         "type": "object",
         "properties": {
@@ -6567,7 +6668,7 @@
                 "format": "uuid"
               }
             ],
-            "description": "Selected Our Events category (from GET /our-events?forSelect=true)",
+            "description": "Selected Our Events category (from GET /admin/our-events?forSelect=true)",
             "example": 1
           },
           "file": {
@@ -6643,6 +6744,17 @@
           "$ref": "#/components/schemas/DiscoverExperience"
         }
       },
+      "PaginatedDiscoverExperienceList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "$ref": "#/components/schemas/DiscoverExperienceList"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        }
+      },
       "CreateDiscoverExperienceRequest": {
         "type": "object",
         "required": [
@@ -6663,6 +6775,49 @@
             "type": "integer",
             "minimum": 0,
             "default": 0
+          }
+        }
+      },
+      "CreateClientDashboardContentRequest": {
+        "type": "object",
+        "required": [
+          "contentType",
+          "description"
+        ],
+        "properties": {
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "discover_experience",
+              "testimonial"
+            ],
+            "description": "Which Client Dashboard item to create"
+          },
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "description": "Required for discover_experience; optional for testimonial"
+          },
+          "description": {
+            "type": "string",
+            "example": "Amazing food and service!"
+          },
+          "sortOrder": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          },
+          "name": {
+            "type": "string",
+            "example": "Priya Sharma",
+            "description": "Required when contentType=testimonial"
+          },
+          "rating": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "example": 5,
+            "description": "Required when contentType=testimonial"
           }
         }
       },
@@ -6731,6 +6886,17 @@
         "type": "array",
         "items": {
           "$ref": "#/components/schemas/Testimonial"
+        }
+      },
+      "PaginatedTestimonialList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "$ref": "#/components/schemas/TestimonialList"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
         }
       },
       "CreateTestimonialRequest": {
@@ -7862,6 +8028,10 @@
           },
           "refNumber": {
             "type": "string"
+          },
+          "clientId": {
+            "type": "integer",
+            "description": "Linked client ID from authenticated session"
           },
           "status": {
             "type": "string",

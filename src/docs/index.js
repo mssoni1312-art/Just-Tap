@@ -124,7 +124,7 @@ const allTags = [
   { name: 'Client', description: 'Just Tap Client mobile app — authentication and inquiries' },
   { name: 'Client Auth', description: 'Client app login and registration' },
   { name: 'Client Inquiries', description: 'Client app service inquiry history' },
-  { name: 'Client App', description: 'Global client app content — our-events, reels, discover experiences, and testimonials' },
+  { name: 'Super Admin Client Dashboard', description: 'Super Admin APIs for client app content — our-events, reels, discover experiences, and testimonials (`/api/v1/admin/*`)' },
   { name: 'Orders', description: 'Order line items and reports' },
   { name: 'Tables', description: 'Table assignments and allocation' },
   { name: 'Activity', description: 'Audit and activity logs' },

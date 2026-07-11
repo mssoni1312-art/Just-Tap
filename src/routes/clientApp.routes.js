@@ -12,22 +12,24 @@ const {
   listClientEventTitlesSchema,
   createClientEventTitleSchema,
   createReelSchema,
-  createDiscoverExperienceSchema,
+  clientFlowReelsListSchema,
+  listDiscoverExperiencesSchema,
+  createClientDashboardContentSchema,
   updateDiscoverExperienceSchema,
-  createTestimonialSchema,
+  listTestimonialsSchema,
   updateTestimonialSchema,
 } = require('../validations/domain.validation');
 
 const router = express.Router();
+
+// Super Admin module — all routes require super admin auth
+router.use(authenticate, requireSuperAdmin);
 
 router.get(
   '/our-events',
   validate(listClientEventTitlesSchema, 'query'),
   asyncHandler(clientEventTitleController.list)
 );
-
-router.use(authenticate, requireSuperAdmin);
-
 router.post(
   '/our-events',
   validate(createClientEventTitleSchema),
@@ -39,22 +41,35 @@ router.delete(
   asyncHandler(clientEventTitleController.remove)
 );
 
+router.get(
+  '/reels',
+  validate(clientFlowReelsListSchema, 'query'),
+  asyncHandler(reelController.list)
+);
 router.post(
   '/reels',
   uploadVideo.single('file'),
   validate(createReelSchema),
   asyncHandler(reelController.create)
 );
-
-router.get(
-  '/discover-experiences',
-  asyncHandler(clientDashboardContentController.listDiscoverExperiences)
+router.delete(
+  '/reels/:id',
+  validate(idParamSchema, 'params'),
+  asyncHandler(reelController.remove)
 );
+
+// Combined create for Discover Experience + Testimonial
 router.post(
   '/discover-experiences',
   uploadVideo.single('file'),
-  validate(createDiscoverExperienceSchema),
-  asyncHandler(clientDashboardContentController.createDiscoverExperience)
+  validate(createClientDashboardContentSchema),
+  asyncHandler(clientDashboardContentController.create)
+);
+
+router.get(
+  '/discover-experiences',
+  validate(listDiscoverExperiencesSchema, 'query'),
+  asyncHandler(clientDashboardContentController.listDiscoverExperiences)
 );
 router.get(
   '/discover-experiences/:id',
@@ -76,13 +91,8 @@ router.delete(
 
 router.get(
   '/testimonials',
+  validate(listTestimonialsSchema, 'query'),
   asyncHandler(clientDashboardContentController.listTestimonials)
-);
-router.post(
-  '/testimonials',
-  uploadVideo.single('file'),
-  validate(createTestimonialSchema),
-  asyncHandler(clientDashboardContentController.createTestimonial)
 );
 router.get(
   '/testimonials/:id',

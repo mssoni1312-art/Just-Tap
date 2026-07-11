@@ -487,9 +487,39 @@ const adminEventFeedbackQuestionSchema = Joi.object({
   };
 });
 
+const listDiscoverExperiencesSchema = paginationQuery.keys({
+  search: Joi.string().trim().allow(''),
+});
+
+const listTestimonialsSchema = paginationQuery.keys({
+  search: Joi.string().trim().allow(''),
+});
+
 const createDiscoverExperienceSchema = Joi.object({
   description: Joi.string().trim().required(),
   sortOrder: Joi.number().integer().min(0).default(0),
+});
+
+const createClientDashboardContentSchema = Joi.object({
+  contentType: Joi.string()
+    .valid('discover_experience', 'testimonial')
+    .required()
+    .messages({
+      'any.only': 'contentType must be discover_experience or testimonial',
+      'any.required': 'contentType is required',
+    }),
+  description: Joi.string().trim().required(),
+  sortOrder: Joi.number().integer().min(0).default(0),
+  name: Joi.when('contentType', {
+    is: 'testimonial',
+    then: Joi.string().trim().required(),
+    otherwise: Joi.forbidden(),
+  }),
+  rating: Joi.when('contentType', {
+    is: 'testimonial',
+    then: Joi.number().integer().min(1).max(5).required(),
+    otherwise: Joi.forbidden(),
+  }),
 });
 
 const updateDiscoverExperienceSchema = Joi.object({
@@ -602,7 +632,10 @@ module.exports = {
   listFeedbackSubmissionsSchema,
   adminEventFeedbackQuestionSchema,
   eventFeedbackQuestionIdParamSchema,
+  listDiscoverExperiencesSchema,
+  listTestimonialsSchema,
   createDiscoverExperienceSchema,
+  createClientDashboardContentSchema,
   updateDiscoverExperienceSchema,
   createTestimonialSchema,
   updateTestimonialSchema,

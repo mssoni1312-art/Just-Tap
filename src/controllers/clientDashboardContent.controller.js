@@ -3,10 +3,17 @@ const clientDashboardContentService = require('../services/clientDashboardConten
 
 module.exports = {
   listDiscoverExperiences: async (req, res) =>
-    sendSuccess(res, await clientDashboardContentService.listDiscoverExperiences()),
+    sendSuccess(res, await clientDashboardContentService.listDiscoverExperiences(req.query)),
 
   getDiscoverExperience: async (req, res) =>
     sendSuccess(res, await clientDashboardContentService.getDiscoverExperience(req.params.id)),
+
+  create: async (req, res) => {
+    const created = await clientDashboardContentService.create(req.file, req.body, req.user.id);
+    const message =
+      created.contentType === 'testimonial' ? 'Testimonial created' : 'Discover experience created';
+    sendSuccess(res, created, message, 201);
+  },
 
   createDiscoverExperience: async (req, res) =>
     sendSuccess(
@@ -36,7 +43,7 @@ module.exports = {
     ),
 
   listTestimonials: async (req, res) =>
-    sendSuccess(res, await clientDashboardContentService.listTestimonials()),
+    sendSuccess(res, await clientDashboardContentService.listTestimonials(req.query)),
 
   getTestimonial: async (req, res) =>
     sendSuccess(res, await clientDashboardContentService.getTestimonial(req.params.id)),

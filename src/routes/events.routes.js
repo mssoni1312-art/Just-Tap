@@ -42,9 +42,8 @@ const {
   listFeedbackQuestionsSchema,
   adminEventFeedbackQuestionSchema,
   eventFeedbackQuestionIdParamSchema,
-  createDiscoverExperienceSchema,
+  createClientDashboardContentSchema,
   updateDiscoverExperienceSchema,
-  createTestimonialSchema,
   updateTestimonialSchema,
   orderTableQuerySchema,
   reportQuerySchema,
@@ -127,7 +126,7 @@ router.delete(
 );
 router.get('/:eventId/feedback-questionnaire/submissions', validate(eventIdParam, 'params'), validate(listFeedbackSubmissionsSchema, 'query'), asyncHandler(feedbackQuestionController.listSubmissions));
 
-// Backward-compatible aliases — eventId is ignored; content is global (same as /discover-experiences and /testimonials)
+// Backward-compatible aliases — eventId is ignored; content is global
 router.get(
   '/:eventId/client-dashboard/discover-experiences',
   validate(eventIdParam, 'params'),
@@ -137,8 +136,8 @@ router.post(
   '/:eventId/client-dashboard/discover-experiences',
   validate(eventIdParam, 'params'),
   uploadVideo.single('file'),
-  validate(createDiscoverExperienceSchema),
-  asyncHandler(clientDashboardContentController.createDiscoverExperience)
+  validate(createClientDashboardContentSchema),
+  asyncHandler(clientDashboardContentController.create)
 );
 router.get(
   '/:eventId/client-dashboard/discover-experiences/:id',
@@ -165,13 +164,6 @@ router.get(
   '/:eventId/client-dashboard/testimonials',
   validate(eventIdParam, 'params'),
   asyncHandler(clientDashboardContentController.listTestimonials)
-);
-router.post(
-  '/:eventId/client-dashboard/testimonials',
-  validate(eventIdParam, 'params'),
-  uploadVideo.single('file'),
-  validate(createTestimonialSchema),
-  asyncHandler(clientDashboardContentController.createTestimonial)
 );
 router.get(
   '/:eventId/client-dashboard/testimonials/:id',

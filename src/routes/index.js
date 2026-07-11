@@ -1,4 +1,11 @@
 const express = require('express');
+const authenticate = require('../middleware/auth.middleware');
+const requireSuperAdmin = require('../middleware/role.middleware');
+const asyncHandler = require('../utils/asyncHandler');
+const validate = require('../middleware/validate.middleware');
+const { uploadVideo } = require('../config/multer');
+const clientDashboardContentController = require('../controllers/clientDashboardContent.controller');
+const { createClientDashboardContentSchema } = require('../validations/domain.validation');
 const authRoutes = require('./auth.routes');
 const meRoutes = require('./me.routes');
 const dashboardRoutes = require('./dashboard.routes');
@@ -46,6 +53,16 @@ router.use('/report', reportRoutes);
 router.use('/feedback-questions', feedbackQuestionRoutes);
 router.use('/public', publicRoutes);
 router.use('/client-flow', clientFlowRoutes);
-router.use('/', clientAppRoutes);
+router.use('/admin', clientAppRoutes);
+
+// Alias for Flutter apps still posting without /admin prefix
+router.post(
+  '/discover-experiences',
+  authenticate,
+  requireSuperAdmin,
+  uploadVideo.single('file'),
+  validate(createClientDashboardContentSchema),
+  asyncHandler(clientDashboardContentController.create)
+);
 
 module.exports = router;

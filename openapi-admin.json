@@ -3,7 +3,7 @@
   "info": {
     "title": "Just Tap Super Admin API",
     "version": "1.0.0",
-    "description": "REST API for the **Just Tap Super Admin** mobile application.\n\n## Authentication\n1. Call `POST /auth/login` with email/phone and password.\n2. Copy the `token` from the response.\n3. Add header on all protected routes: `Authorization: Bearer <token>`.\n4. Refresh expired tokens via `POST /auth/token/refresh`.\n\n**Default seed login:** `admin@justtap.com` / `admin123`\n\n## Clients (Create Event)\n- `GET /clients?forSelect=true` — load **Client Name** dropdown\n- `POST /clients` — quick-add client from **+** modal (`{ \"name\": \"testy\" }`)\n- `GET /clients/{id}` — get client details\n\n## Function Names (Create Event)\n- `GET /function-names?forSelect=true` — load **Select Function** dropdown\n- `POST /function-names` — quick-add function from **+** button (`{ \"name\": \"Reception\" }`)\n- `GET /function-names/{id}` — get function name details\n\n## Manager API docs\nManager portal has a separate Swagger UI: `/api/manager/docs`",
+    "description": "REST API for the **Just Tap Super Admin** mobile application.\n\n## Authentication\n1. Call `POST /auth/login` with email/phone and password.\n2. Copy the `token` from the response.\n3. Add header on all protected routes: `Authorization: Bearer <token>`.\n4. Refresh expired tokens via `POST /auth/token/refresh`.\n\n**Default seed login:** `admin@justtap.com` / `admin123`\n\n## Clients (Create Event)\n- `GET /clients?forSelect=true` — load **Client Name** dropdown\n- `POST /clients` — quick-add client from **+** modal (`{ \"name\": \"testy\" }`)\n- `GET /clients/{id}` — get client details\n\n## Function Names (Create Event)\n- `GET /function-names?forSelect=true` — load **Select Function** dropdown\n- `POST /function-names` — quick-add function from **+** button (`{ \"name\": \"Reception\" }`)\n- `GET /function-names/{id}` — get function name details\n\n## Manager API docs\nManager portal has a separate Swagger UI: `/api/manager/docs`\n\n## Client API docs\nClient app has a separate Swagger UI: `/api/client/docs`",
     "contact": {
       "name": "Just Tap API Support",
       "email": "admin@justtap.com"
@@ -92,8 +92,8 @@
       "description": "Client/guest mobile app — reels, feeds, and public event content"
     },
     {
-      "name": "Client App",
-      "description": "Global client app content — our-events, reels, discover experiences, and testimonials"
+      "name": "Super Admin Client Dashboard",
+      "description": "Super Admin APIs for client app content — our-events, reels, discover experiences, and testimonials (`/api/v1/admin/*`)"
     },
     {
       "name": "Orders",
@@ -10697,6 +10697,271 @@
         }
       }
     },
+    "/client-flow/auth/signup": {
+      "post": {
+        "tags": [
+          "Client Flow"
+        ],
+        "summary": "Client sign up",
+        "description": "Sign up for the **Client app**. Creates user account and client profile.",
+        "operationId": "clientFlowAuthSignup",
+        "security": [],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterClientRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sign up successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/LoginResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/client-flow/auth/login": {
+      "post": {
+        "tags": [
+          "Client Flow"
+        ],
+        "summary": "Client login",
+        "description": "Login for the **Client app** with email or phone and password.",
+        "operationId": "clientFlowAuthLogin",
+        "security": [],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/LoginResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/client-flow/auth/otp/send": {
+      "post": {
+        "tags": [
+          "Client Flow"
+        ],
+        "summary": "Send client email OTP",
+        "description": "Send a 6-digit OTP to the client email for verification.",
+        "operationId": "clientFlowAuthOtpSend",
+        "security": [],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientOtpEmailSendRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP sent to email",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/client-flow/auth/otp/verify": {
+      "post": {
+        "tags": [
+          "Client Flow"
+        ],
+        "summary": "Verify client email OTP",
+        "description": "Confirm the OTP sent to the client email.",
+        "operationId": "clientFlowAuthOtpVerify",
+        "security": [],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientOtpEmailVerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ClientOtpEmailVerifyResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
     "/client-flow/reels": {
       "get": {
         "tags": [
@@ -11067,14 +11332,136 @@
       }
     },
     "/client-flow/inquiries": {
+      "get": {
+        "tags": [
+          "Client Flow"
+        ],
+        "summary": "List client inquiries",
+        "description": "Returns paginated service inquiries for the **logged-in client only**, filtered by `client_id`. Requires client JWT from `/client-flow/auth/login`.",
+        "operationId": "clientFlowInquiriesList",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "converted"
+              ]
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "example": "created_at"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/PaginatedList"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
       "post": {
         "tags": [
           "Client Flow"
         ],
         "summary": "Submit service inquiry from client app",
-        "description": "Public endpoint for the **Client app Service Request** form. Each submission includes one event day (`eventDay`). Day number is always stored as 1 on the server.",
+        "description": "Submit a service inquiry for the **logged-in client**. Inquiry is always saved with the authenticated `client_id`. Requires client JWT.",
         "operationId": "clientFlowInquiryCreate",
-        "security": [],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [],
         "responses": {
           "200": {
@@ -11125,15 +11512,19 @@
         }
       }
     },
-    "/our-events": {
+    "/admin/our-events": {
       "get": {
         "tags": [
-          "Client App"
+          "Super Admin Client Dashboard"
         ],
         "summary": "List Our Events categories",
-        "description": "Public global list of Our Events categories for dropdown/chips. Use `forSelect=true` for `{ items: [...] }`.",
+        "description": "Super Admin list of Our Events categories for Client Dashboard. Use `forSelect=true` for `{ items: [...] }`.",
         "operationId": "ourEventsList",
-        "security": [],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "forSelect",
@@ -11204,7 +11595,7 @@
       },
       "post": {
         "tags": [
-          "Client App"
+          "Super Admin Client Dashboard"
         ],
         "summary": "Create Our Events category",
         "description": "Adds a global curated experience category shown in the client app.",
@@ -11274,10 +11665,10 @@
         }
       }
     },
-    "/our-events/{id}": {
+    "/admin/our-events/{id}": {
       "delete": {
         "tags": [
-          "Client App"
+          "Super Admin Client Dashboard"
         ],
         "summary": "Delete Our Events category",
         "description": "",
@@ -11337,10 +11728,115 @@
         }
       }
     },
-    "/reels": {
+    "/admin/reels": {
+      "get": {
+        "tags": [
+          "Super Admin Client Dashboard"
+        ],
+        "summary": "List reels",
+        "description": "Paginated admin list of global reels shown in the client app. Filter by Our Events category or search name/venue.",
+        "operationId": "reelsList",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "ourEventId",
+            "in": "query",
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              ]
+            },
+            "description": "Filter by Our Events category"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search name or venue"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/PaginatedEventReelList"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
       "post": {
         "tags": [
-          "Client App"
+          "Super Admin Client Dashboard"
         ],
         "summary": "Upload reel/video",
         "description": "Saves a global reel with video file, our-event category, name, venue, and guest count for the client app.",
@@ -11410,20 +11906,111 @@
         }
       }
     },
-    "/discover-experiences": {
+    "/admin/reels/{id}": {
+      "delete": {
+        "tags": [
+          "Super Admin Client Dashboard"
+        ],
+        "summary": "Delete reel",
+        "description": "Soft-deletes a reel so it no longer appears in the client app feed.",
+        "operationId": "reelsDelete",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IdParam"
+            },
+            "description": "Record ID (numeric or UUID)",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reel deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/admin/discover-experiences": {
       "get": {
         "tags": [
-          "Client App"
+          "Super Admin Client Dashboard"
         ],
         "summary": "List discover experiences",
-        "description": "Global promotional videos shown in the client app Discover section.",
+        "description": "Paginated admin list for the Client Dashboard **Discover Experience** listing screen. Soft-deleted items are excluded.",
         "operationId": "discoverExperiencesList",
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search description"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Operation successful",
@@ -11437,7 +12024,7 @@
                     {
                       "properties": {
                         "data": {
-                          "$ref": "#/components/schemas/DiscoverExperienceList"
+                          "$ref": "#/components/schemas/PaginatedDiscoverExperienceList"
                         }
                       }
                     }
@@ -11474,29 +12061,29 @@
       },
       "post": {
         "tags": [
-          "Client App"
+          "Super Admin Client Dashboard"
         ],
-        "summary": "Create discover experience",
-        "operationId": "discoverExperiencesCreate",
+        "summary": "Create Discover Experience or Testimonial",
+        "operationId": "clientDashboardContentCreate",
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "description": "Upload a video and description for the client app Discover Experience section.",
+        "description": "Combined Super Admin create API. Set `contentType` to `discover_experience` or `testimonial`. Also available as `POST /discover-experiences`.",
         "requestBody": {
           "required": true,
           "content": {
             "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/CreateDiscoverExperienceRequest"
+                "$ref": "#/components/schemas/CreateClientDashboardContentRequest"
               }
             }
           }
         },
         "responses": {
           "201": {
-            "description": "Discover experience created",
+            "description": "Created",
             "content": {
               "application/json": {
                 "schema": {
@@ -11507,7 +12094,14 @@
                     {
                       "properties": {
                         "data": {
-                          "$ref": "#/components/schemas/DiscoverExperience"
+                          "oneOf": [
+                            {
+                              "$ref": "#/components/schemas/DiscoverExperience"
+                            },
+                            {
+                              "$ref": "#/components/schemas/Testimonial"
+                            }
+                          ]
                         }
                       }
                     }
@@ -11531,10 +12125,77 @@
         }
       }
     },
-    "/discover-experiences/{id}": {
+    "/discover-experiences": {
+      "post": {
+        "tags": [
+          "Super Admin Client Dashboard"
+        ],
+        "summary": "Create Discover Experience or Testimonial (alias)",
+        "operationId": "clientDashboardContentCreateAlias",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "description": "Alias of `POST /admin/discover-experiences` for Flutter clients.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateClientDashboardContentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "oneOf": [
+                            {
+                              "$ref": "#/components/schemas/DiscoverExperience"
+                            },
+                            {
+                              "$ref": "#/components/schemas/Testimonial"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
+    "/admin/discover-experiences/{id}": {
       "get": {
         "tags": [
-          "Client App"
+          "Super Admin Client Dashboard"
         ],
         "summary": "Get discover experience",
         "description": "",
@@ -11606,7 +12267,7 @@
       },
       "patch": {
         "tags": [
-          "Client App"
+          "Super Admin Client Dashboard"
         ],
         "summary": "Update discover experience",
         "operationId": "discoverExperiencesUpdate",
@@ -11678,10 +12339,10 @@
       },
       "delete": {
         "tags": [
-          "Client App"
+          "Super Admin Client Dashboard"
         ],
         "summary": "Delete discover experience",
-        "description": "",
+        "description": "Soft-deletes a discover experience so it no longer appears on Client Dashboard or client-flow feeds.",
         "operationId": "discoverExperiencesDelete",
         "security": [
           {
@@ -11702,7 +12363,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Operation successful",
+            "description": "Discover experience deleted",
             "content": {
               "application/json": {
                 "schema": {
@@ -11738,20 +12399,48 @@
         }
       }
     },
-    "/testimonials": {
+    "/admin/testimonials": {
       "get": {
         "tags": [
-          "Client App"
+          "Super Admin Client Dashboard"
         ],
         "summary": "List testimonials",
-        "description": "Global testimonials shown in the client app.",
+        "description": "Paginated admin list for the Client Dashboard **Testimonials** listing screen. Soft-deleted items are excluded.",
         "operationId": "testimonialsList",
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search name or description"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Operation successful",
@@ -11765,7 +12454,7 @@
                     {
                       "properties": {
                         "data": {
-                          "$ref": "#/components/schemas/TestimonialList"
+                          "$ref": "#/components/schemas/PaginatedTestimonialList"
                         }
                       }
                     }
@@ -11799,70 +12488,12 @@
             "$ref": "#/components/responses/InternalServerError"
           }
         }
-      },
-      "post": {
-        "tags": [
-          "Client App"
-        ],
-        "summary": "Create testimonial",
-        "operationId": "testimonialsCreate",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "description": "Add a testimonial with rating, name, description, and optional video.",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTestimonialRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Testimonial created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/SuccessResponse"
-                    },
-                    {
-                      "properties": {
-                        "data": {
-                          "$ref": "#/components/schemas/Testimonial"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationError"
-          }
-        }
       }
     },
-    "/testimonials/{id}": {
+    "/admin/testimonials/{id}": {
       "get": {
         "tags": [
-          "Client App"
+          "Super Admin Client Dashboard"
         ],
         "summary": "Get testimonial",
         "description": "",
@@ -11934,7 +12565,7 @@
       },
       "patch": {
         "tags": [
-          "Client App"
+          "Super Admin Client Dashboard"
         ],
         "summary": "Update testimonial",
         "operationId": "testimonialsUpdate",
@@ -12006,10 +12637,10 @@
       },
       "delete": {
         "tags": [
-          "Client App"
+          "Super Admin Client Dashboard"
         ],
         "summary": "Delete testimonial",
-        "description": "",
+        "description": "Soft-deletes a testimonial so it no longer appears on Client Dashboard or client-flow feeds.",
         "operationId": "testimonialsDelete",
         "security": [
           {
@@ -12030,7 +12661,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Operation successful",
+            "description": "Testimonial deleted",
             "content": {
               "application/json": {
                 "schema": {
@@ -12268,6 +12899,38 @@
           }
         }
       },
+      "RegisterClientRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password",
+          "name"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "client@example.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 6,
+            "example": "client123"
+          },
+          "name": {
+            "type": "string",
+            "example": "Acme Events"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+919876543210"
+          },
+          "cityName": {
+            "type": "string",
+            "example": "Mumbai"
+          }
+        }
+      },
       "LoginResponse": {
         "type": "object",
         "properties": {
@@ -12323,6 +12986,64 @@
             "type": "string",
             "pattern": "^\\d{6}$",
             "example": "123456"
+          }
+        }
+      },
+      "ClientOtpEmailSendRequest": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "client@example.com"
+          }
+        }
+      },
+      "ClientOtpEmailVerifyRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "code"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "client@example.com"
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^\\d{6}$",
+            "example": "123456"
+          }
+        }
+      },
+      "ClientOtpEmailVerifyResponse": {
+        "type": "object",
+        "properties": {
+          "emailVerified": {
+            "type": "boolean",
+            "example": true
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "message": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string",
+            "description": "Present when client account already exists"
+          },
+          "refreshToken": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
           }
         }
       },
@@ -12801,6 +13522,17 @@
           "$ref": "#/components/schemas/EventReel"
         }
       },
+      "PaginatedEventReelList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "$ref": "#/components/schemas/EventReelList"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        }
+      },
       "PublicEventReelsResponse": {
         "type": "object",
         "properties": {
@@ -13017,7 +13749,7 @@
                 "format": "uuid"
               }
             ],
-            "description": "Selected Our Events category (from GET /our-events?forSelect=true)",
+            "description": "Selected Our Events category (from GET /admin/our-events?forSelect=true)",
             "example": 1
           },
           "file": {
@@ -13093,6 +13825,17 @@
           "$ref": "#/components/schemas/DiscoverExperience"
         }
       },
+      "PaginatedDiscoverExperienceList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "$ref": "#/components/schemas/DiscoverExperienceList"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        }
+      },
       "CreateDiscoverExperienceRequest": {
         "type": "object",
         "required": [
@@ -13113,6 +13856,49 @@
             "type": "integer",
             "minimum": 0,
             "default": 0
+          }
+        }
+      },
+      "CreateClientDashboardContentRequest": {
+        "type": "object",
+        "required": [
+          "contentType",
+          "description"
+        ],
+        "properties": {
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "discover_experience",
+              "testimonial"
+            ],
+            "description": "Which Client Dashboard item to create"
+          },
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "description": "Required for discover_experience; optional for testimonial"
+          },
+          "description": {
+            "type": "string",
+            "example": "Amazing food and service!"
+          },
+          "sortOrder": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          },
+          "name": {
+            "type": "string",
+            "example": "Priya Sharma",
+            "description": "Required when contentType=testimonial"
+          },
+          "rating": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "example": 5,
+            "description": "Required when contentType=testimonial"
           }
         }
       },
@@ -13181,6 +13967,17 @@
         "type": "array",
         "items": {
           "$ref": "#/components/schemas/Testimonial"
+        }
+      },
+      "PaginatedTestimonialList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "$ref": "#/components/schemas/TestimonialList"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
         }
       },
       "CreateTestimonialRequest": {
@@ -14312,6 +15109,10 @@
           },
           "refNumber": {
             "type": "string"
+          },
+          "clientId": {
+            "type": "integer",
+            "description": "Linked client ID from authenticated session"
           },
           "status": {
             "type": "string",
